@@ -1,0 +1,16 @@
+*.pyc
+.DS_Store
+data.cfg
+/.idea
+*.xml
+*.html
+/private
+*.log
+*.pkl
+stock_list.txt
+bases.csv
+*.csv
+*.xls
+*.png
+config.py
+conf.py
