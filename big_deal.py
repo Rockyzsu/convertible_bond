@@ -20,6 +20,7 @@ class BigDeal(object):
         self.logger = self.llogger('fetch_daily')
         self.db_stock_engine = get_engine('db_stock', True)
         self.jisilu_df = self.get_code()
+        self.code_name_dict=dict(zip(list(self.jisilu_df['可转债代码'].values),list(self.jisilu_df['可转债名称'].values)))
         self.db = pymongo.MongoClient('10.18.6.46', 27001)
 
     def llogger(self, filename):
@@ -50,17 +51,29 @@ class BigDeal(object):
         df['time'] = df['time'].map(lambda x: date + ' ' + x)
         return df
 
-    # 从mongo获取数据
-    def analysis(self):
-        code='110030'
+    # 从mongo获取数据 默认分钟
+    def get_volume_distribition(self,code,date,types='min',big_deal=1000):
+        # code='110030'
+        # date='2019-04-02'
+
+        # big_deal = 1000 # 1000张 100w
+
+        date_d = datetime.datetime.strptime(date,'%Y-%m-%d')
+        next_day = date_d+datetime.timedelta(days=1)
+
         doc = self.db['cb_deal'][code]
         d=[]
-        for item in doc.find({},{'_id':0}):
+        for item in doc.find({'time':{'$gte':date_d,'$lt':next_day}},{'_id':0}):
             d.append(item)
-        df = pd.DataFrame(d)
-        print(df.info())
-        input()
+        if len(d)==0:
+            return (code,-1)
 
+        df = pd.DataFrame(d)
+
+        df=df.set_index('time',drop=True)
+        min_df = df.resample(types).sum()[['price','volume']]
+        count = min_df[min_df['volume']>big_deal]['volume'].count()
+        return (code,count)
 
     def get_tick(self, code, date):
         fs_df = None
@@ -109,8 +122,8 @@ class BigDeal(object):
         try:
             self.db['cb_deal'][code].insert_many(js)
         except Exception as e:
-            print(e)
-            print('插入数据失败')
+            self.logger.error(e)
+            self.logger.error('插入数据失败')
             return {'status': -1, 'code': code}
         else:
             return {'status': 0, 'code': code}
@@ -125,9 +138,9 @@ class BigDeal(object):
         if today:
             d = datetime.date.today().strftime('%Y-%m-%d')
             if ts.is_holiday(d):
-                print('holiday,skip>>>>{}'.format(d))
+                self.logger.info('holiday,skip>>>>{}'.format(d))
             else:
-                print('going>>>>{}'.format(d))
+                self.logger.info('going>>>>{}'.format(d))
                 self.loop_code(d)
         # 获取一周的数据看看
 
@@ -141,8 +154,17 @@ class BigDeal(object):
                     print('going>>>>{}'.format(d))
                     self.loop_code(d)
 
+    def analysis(self,date):
+        kzz_big_deal_count =[]
+        for code in self.jisilu_df['可转债代码'].values:
+            kzz_big_deal_count.append(self.get_volume_distribition(code,date))
+
+        kzz_big_deal_order = list(sorted(kzz_big_deal_count,key=lambda x:x[1],reverse=True))
+        # print(kzz_big_deal_order)
+        for item in kzz_big_deal_order:
+            print('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
 
 if __name__ == '__main__':
     obj = BigDeal()
     # obj.loop_date()
-    obj.analysis()
+    obj.analysis('2019-04-03')
