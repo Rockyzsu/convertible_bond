@@ -5,7 +5,7 @@ import logging
 import os
 import random
 import time
-
+from send_mail import sender_139
 import pymongo
 import tushare as ts
 import pandas as pd
@@ -17,7 +17,7 @@ class BigDeal(object):
     def __init__(self):
 
         # self.df = self.get_tick()
-        self.logger = self.llogger('fetch_daily')
+        self.logger = self.llogger('cb_deal_everyday')
         self.db_stock_engine = get_engine('db_stock', True)
         self.jisilu_df = self.get_code()
         self.code_name_dict=dict(zip(list(self.jisilu_df['可转债代码'].values),list(self.jisilu_df['可转债名称'].values)))
@@ -51,7 +51,7 @@ class BigDeal(object):
         df['time'] = df['time'].map(lambda x: date + ' ' + x)
         return df
 
-    # 从mongo获取数据 默认分钟
+    # 从mongo获取数据 默认分钟 1000张
     def get_volume_distribition(self,code,date,types='min',big_deal=1000):
         # code='110030'
         # date='2019-04-02'
@@ -65,6 +65,7 @@ class BigDeal(object):
         d=[]
         for item in doc.find({'time':{'$gte':date_d,'$lt':next_day}},{'_id':0}):
             d.append(item)
+
         if len(d)==0:
             return (code,-1)
 
@@ -113,10 +114,13 @@ class BigDeal(object):
 
             if ret.get('status') == -1:
                 self.logger.error('保存失败 >>>> code={}, date={}'.format(code, date))
+            else:
+                self.logger.error('保存成功 >>>> code={}, date={}'.format(code, date))
 
     def store(self, code, df):
         df['code'] = code
         js = json.loads(df.T.to_json()).values()
+
         for row in js:
             row['time'] = datetime.datetime.utcfromtimestamp(row['time'] / 1000)
         try:
@@ -154,17 +158,48 @@ class BigDeal(object):
                     print('going>>>>{}'.format(d))
                     self.loop_code(d)
 
-    def analysis(self,date):
+    def analysis(self,date=None,head=300):
+        if date is None:
+            date=datetime.date.today().strftime('%Y-%m-%d')
+        # date='2019-04-25'
         kzz_big_deal_count =[]
+
         for code in self.jisilu_df['可转债代码'].values:
             kzz_big_deal_count.append(self.get_volume_distribition(code,date))
 
         kzz_big_deal_order = list(sorted(kzz_big_deal_count,key=lambda x:x[1],reverse=True))
         # print(kzz_big_deal_order)
+        send_content=[]
+
+        for item in kzz_big_deal_order[:head]:
+            self.logger.info('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
+            send_content.append('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
+        # 入库的
+        big_deal_doc = self.db['db_stock']['big_deal_logger']
         for item in kzz_big_deal_order:
-            print('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
+            d={'Date':date,'name':self.code_name_dict.get(item[0]), 'times':int(item[1])}
+            try:
+                big_deal_doc.insert(d)
+            except Exception as e:
+                self.logger.error(e)
+                self.logger.error(d)
+            # send_content.append('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
+
+        content ='\n'.join(send_content)
+        title='{}'.format(date)
+
+        try:
+
+            sender_139(title,content)
+        except Exception as e:
+            self.logger.error(e)
+        else:
+            self.logger.info('发送成功')
+
+
+def main():
+    obj = BigDeal()
+    obj.analysis(head=30)
 
 if __name__ == '__main__':
-    obj = BigDeal()
-    # obj.loop_date()
-    obj.analysis('2019-04-03')
+    main()

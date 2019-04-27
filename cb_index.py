@@ -7,8 +7,11 @@ import datetime
 import re
 import pandas as pd
 import requests
-from setting import get_mysql_conn
+from setting import get_mysql_conn,llogger
 import tushare as ts
+
+logger = llogger(__file__)
+
 # 获取当天的记录
 def today():
     url='https://www.jisilu.cn/data/cbnew/cb_index_quote/'
@@ -48,6 +51,7 @@ def today():
         con.rollback()
     else:
         con.commit()
+        logger.info('爬取成功并入库')
 
 # 获取历史记录
 def history_data():
@@ -110,7 +114,9 @@ def history_data():
 
 if __name__ == '__main__':
     current = datetime.datetime.now().strftime('%Y-%m-%d')
+    logger.info('Start')
     if ts.is_holiday(current):
+        logger.info('Holiday')
         exit()
     else:
         # history_data()  # 第一次获取历史数据， 后面获取每一天的数据

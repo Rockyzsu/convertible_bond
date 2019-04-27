@@ -1,31 +1,28 @@
 # -*-coding=utf-8-*-
-import datetime
-
-import pymongo
-from send_mail import sender_139
-
-__author__ = 'Rocky'
 '''
 http://30daydo.com
 Contact: weigesysu@qq.com
 '''
+
+import datetime
+import pymongo
+from send_mail import sender_139
 from scipy import stats
 import tushare as ts
-from setting import get_engine, get_mysql_conn
+from setting import get_engine, get_mysql_conn,llogger
 import pandas as pd
 # from filter_stock import Filter_Stock
-
 # 筛选出 新股 的可转债
-current = datetime.datetime.now()
-last_week = current + datetime.timedelta(days=7 * -2)
-conn = get_engine('db_stock')
-df = pd.read_sql('tb_bond_jisilu', con=conn)
-code_list = df['正股代码'].values
-kzz_code_list = df['可转债代码'].values
-kzz_name_list = df['可转债名称'].values
-db = pymongo.MongoClient('10.18.6.26', port=27001)
+# current = datetime.datetime.now()
+# last_week = current + datetime.timedelta(days=7 * -2)
+# conn = get_engine('db_stock')
+# df = pd.read_sql('tb_bond_jisilu', con=conn)
+# code_list = df['正股代码'].values
+# kzz_code_list = df['可转债代码'].values
+# kzz_name_list = df['可转债名称'].values
+# db = pymongo.MongoClient('10.18.6.46', port=27001)
 
-
+logger = llogger('log/'+'bond_statistic')
 # 获取次新股的可转债数据
 def get_zhenggu():
     obj = Filter_Stock()
@@ -176,8 +173,106 @@ def find_lower_bond():
 
     print('done')
 
+# 统计每天转债跌得比正股多的
+def find_zz_zg_diff():
+    current=datetime.date.today().strftime('%Y-%m-%d')
+    if ts.is_holiday(current):
+        logger.info('假期')
+        return
+
+    # engine=get_engine('db_stock','local')
+    # df = pd.read_sql('tb_bond_jisilu',con=engine)
+    # df[(df['正股涨跌幅']<=0) & (df['正股涨跌幅']>=df['可转债涨幅'])]
+    con=get_mysql_conn('db_stock','local')
+    cursor=con.cursor()
+    query_cmd = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
+    minus_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`<0'
+    plug_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`>=0'
+
+    cursor.execute(query_cmd)
+    get_count = cursor.fetchone()
+    num=get_count[0]
+
+    cursor.execute(minus_count_cmd)
+    minus_count=cursor.fetchone()[0]
+
+
+    cursor.execute(plug_count_cmd)
+    plug_count=cursor.fetchone()[0]
+
+    title='{} 转债跌大于正股数 {}'.format(current,num)
+    content='转债跌大于正股数 {}\n可转债涨幅大于0:\t{}\n可转债涨幅小于0:\t{}'.format(num,plug_count,minus_count)
+    try:
+        sender_139(title,content)
+    except Exception as e:
+        logger.error(e)
+    else:
+        logger.info('发送成功')
+        logger.info(content)
+
+    # 写入数据库
+    insert_sql = 'insert into tb_bond_analysis (date,转债跌大于正股数量,可转债涨幅大于0,可转债涨幅小于0) values (%s,%s,%s,%s)'
+    try:
+        cursor.execute(insert_sql,(current,num,plug_count,minus_count))
+        con.commit()
+    except Exception as e:
+        logger.error(e)
+        con.rollback()
+    else:
+        logger.info('入库成功')
+
+
+# 查看历史数据
+def find_zz_zg_diff_history():
+
+    con = get_mysql_conn('db_jisilu', 'local')
+    cursor = con.cursor()
+    current = datetime.date.today()
+    days=60
+    tb_name ='tb_jsl_{}'
+    num_list =[]
+    for i in range(days):
+
+        start = (current+datetime.timedelta(days=-1*i)).strftime("%Y-%m-%d")
+        name = tb_name.format(start)
+
+        query_cmd = 'select count(*) from `{}` WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'.format(name)
+        try:
+            cursor.execute(query_cmd)
+        except Exception as e:
+            print(e)
+            con.rollback()
+            continue
+
+        else:
+            get_count = cursor.fetchone()
+            num = get_count[0]
+            num_list.append((start,num))
+    print(num_list)
+    # print(sorted(num_list,key=lambda x:x[1],reverse=True))
+    con.close()
+
+    con2 = get_mysql_conn('db_stock','local')
+    cur=con2.cursor()
+    insert_sql = 'insert into `tb_zz_more_drop_zg` (date,number) values (%s,%s)'
+    try:
+        cur.executemany(insert_sql,(num_list))
+        con2.commit()
+    except Exception as e:
+        print(e)
+        con2.rollback()
+    else:
+        print('入库成功')
+
+
+
+
+
 def main():
-    find_lower_bond()
+    # find_zz_zg_diff()
+    # find_lower_bond()
+    find_zz_zg_diff()
+    # find_zz_zg_diff_history()
 
 if __name__ == "__main__":
     # source_list=sort_top_raise()
