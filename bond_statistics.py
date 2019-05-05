@@ -11,6 +11,7 @@ from scipy import stats
 import tushare as ts
 from setting import get_engine, get_mysql_conn,llogger
 import pandas as pd
+import numpy as np
 # from filter_stock import Filter_Stock
 # 筛选出 新股 的可转债
 # current = datetime.datetime.now()
@@ -221,6 +222,52 @@ def find_zz_zg_diff():
     else:
         logger.info('入库成功')
 
+    try:
+        search_sql = 'select `溢价率` from `tb_jsl_{}`'.format(date_str)
+        cursor.execute(search_sql)
+
+    except Exception as e:
+        print(e)
+
+    else:
+        content = cursor.fetchall()
+        data = []
+        for item in content:
+            data.append(item[0])
+
+    try:
+        search_sql = 'select `溢价率` from `tb_bond_jisilu`'
+        cursor.execute(search_sql)
+
+    except Exception as e:
+        print(e)
+
+    else:
+        content = cursor.fetchall()
+        data = []
+        for item in content:
+            data.append(item[0])
+
+        np_data = np.array(data)
+        max_value = np.round(np_data.max(), 2)
+        min_value = np.round(np_data.min(), 2)
+        mean = np.round(np_data.mean(), 2)
+        median = np.round(np.median(np_data), 2)
+        count = len(np_data)
+        t_value = (current, float(mean), float(max_value), float(min_value), float(median), count)
+        print(t_value)
+        update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
+        # con=get_mysql_conn('d')
+        try:
+            cursor.execute(update_sql, t_value)
+            con.commit()
+
+        except Exception as e:
+            print(e)
+            con.rollback()
+        else:
+            print('update')
+
 
 # 查看历史数据
 def find_zz_zg_diff_history():
@@ -265,14 +312,64 @@ def find_zz_zg_diff_history():
         print('入库成功')
 
 
+def avg_yjl_history():
+    con=get_mysql_conn('db_jisilu','local')
+    con2=get_mysql_conn('db_stock','local')
+
+    cursor=con.cursor()
+    cursor2=con2.cursor()
+
+    start = datetime.datetime(2019,2,25)
+    update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
+    while 1:
+        if start>=datetime.datetime.now():
+            break
+        date_str = start.strftime('%Y-%m-%d')
+        try:
+            search_sql = 'select `溢价率` from `tb_jsl_{}`'.format(date_str)
+            cursor.execute(search_sql)
+
+        except Exception as e:
+            print(e)
+
+        else:
+            content = cursor.fetchall()
+            data=[]
+            for item in content:
+                data.append(item[0])
+
+            np_data = np.array(data)
+            max_value= np.round(np_data.max(),2)
+            min_value= np.round(np_data.min(),2)
+            mean = np.round(np_data.mean(),2)
+            median=np.round(np.median(np_data),2)
+            count=len(np_data)
+            t_value=(date_str,float(mean),float(max_value),float(min_value),float(median),count)
+            print(t_value)
+
+            try:
+                cursor2.execute(update_sql,t_value)
+                con2.commit()
+
+            except Exception as e:
+                print(e)
+                con2.rollback()
+            else:
+                print('update')
+
+
+        finally:
+
+            start=start+datetime.timedelta(days=1)
 
 
 
 def main():
     # find_zz_zg_diff()
     # find_lower_bond()
-    find_zz_zg_diff()
+    # find_zz_zg_diff()
     # find_zz_zg_diff_history()
+    avg_yjl_history()
 
 if __name__ == "__main__":
     # source_list=sort_top_raise()

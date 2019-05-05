@@ -17,7 +17,7 @@ class BigDeal(object):
     def __init__(self):
 
         # self.df = self.get_tick()
-        self.logger = self.llogger('cb_deal_everyday')
+        self.logger = self.llogger('log/'+'big_deal')
         self.db_stock_engine = get_engine('db_stock', True)
         self.jisilu_df = self.get_code()
         self.code_name_dict=dict(zip(list(self.jisilu_df['可转债代码'].values),list(self.jisilu_df['可转债名称'].values)))
@@ -191,6 +191,7 @@ class BigDeal(object):
         try:
 
             sender_139(title,content)
+
         except Exception as e:
             self.logger.error(e)
         else:
