@@ -10,7 +10,7 @@ import pymongo
 import tushare as ts
 import pandas as pd
 from setting import get_engine
-
+import config
 
 class BigDeal(object):
 
@@ -18,10 +18,13 @@ class BigDeal(object):
 
         # self.df = self.get_tick()
         self.logger = self.llogger('log/'+'big_deal')
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        if ts.is_holiday(today):
+            self.logger.info('{}假期 >>>>>'.format(today))
         self.db_stock_engine = get_engine('db_stock', True)
         self.jisilu_df = self.get_code()
         self.code_name_dict=dict(zip(list(self.jisilu_df['可转债代码'].values),list(self.jisilu_df['可转债名称'].values)))
-        self.db = pymongo.MongoClient('10.18.6.46', 27001)
+        self.db = pymongo.MongoClient(config.mongodb_host, config.mongodb_port)
 
     def llogger(self, filename):
         logger = logging.getLogger(filename)  # 不加名称设置root logger
@@ -161,7 +164,7 @@ class BigDeal(object):
     def analysis(self,date=None,head=300):
         if date is None:
             date=datetime.date.today().strftime('%Y-%m-%d')
-        # date='2019-04-25'
+        # date='2019-05-08'
         kzz_big_deal_count =[]
 
         for code in self.jisilu_df['可转债代码'].values:
@@ -186,7 +189,7 @@ class BigDeal(object):
             # send_content.append('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
 
         content ='\n'.join(send_content)
-        title='{}'.format(date)
+        title='{}-大单监控'.format(date)
 
         try:
 
