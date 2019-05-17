@@ -59,9 +59,9 @@ def get_percentage(code, ktype):
         try:
             df = ts.get_k_data(code, ktype=ktype, start=last_week_str)
         except Exception as e:
-            print(e)
+            logger.error(e)
             count += 1
-            print('retry >> {}'.format(count))
+            logger.info('retry >> {}'.format(count))
             if count == retry:
                 df = pd.DataFrame()
                 break
@@ -98,7 +98,7 @@ def save_list_mongo(source_list):
     try:
         sender_139(title, content)
     except Exception as e:
-        print(e)
+        logger.error(e)
 
     d = dict(source_list)
     d['updated'] = current
@@ -106,7 +106,7 @@ def save_list_mongo(source_list):
     try:
         db['db_parker']['kzz_weekly_raise'].insert(d)
     except Exception as e:
-        print(e)
+        logger.error(e)
 
 
 # 导出一些基本数据，可转债的
@@ -197,12 +197,57 @@ def find_zz_zg_diff():
     cursor.execute(minus_count_cmd)
     minus_count=cursor.fetchone()[0]
 
-
     cursor.execute(plug_count_cmd)
     plug_count=cursor.fetchone()[0]
 
-    title='{} 转债跌大于正股数 {}'.format(current,num)
-    content='转债跌大于正股数 {}\n可转债涨幅大于0:\t{}\n可转债涨幅小于0:\t{}'.format(num,plug_count,minus_count)
+    try:
+        search_sql = 'select `溢价率` from `tb_bond_jisilu`'
+        cursor.execute(search_sql)
+
+    except Exception as e:
+        logger.error(e)
+
+    else:
+        content = cursor.fetchall()
+        data = []
+        for item in content:
+            data.append(item[0])
+
+        np_data = np.array(data)
+        max_value = np.round(np_data.max(), 2)
+        min_value = np.round(np_data.min(), 2)
+        mean = np.round(np_data.mean(), 2)
+        median = np.round(np.median(np_data), 2)
+        count = len(np_data)
+        t_value = (current, float(mean), float(max_value), float(min_value), float(median), count)
+        update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
+        try:
+            cursor.execute(update_sql, t_value)
+            con.commit()
+
+        except Exception as e:
+            logger.error(e)
+            con.rollback()
+        else:
+            logger.info('update')
+
+    cal_query = 'select `可转债涨幅` from tb_bond_jisilu'
+
+    cursor.execute(cal_query)
+    cal_result = cursor.fetchall()
+    cal_result_list=[]
+    for i in cal_result:
+        cal_result_list.append(i[0])
+
+    cal_result_np=np.array(cal_result_list)
+    max_v=cal_result_np.max()
+    min_v=cal_result_np.min()
+    mean=round(cal_result_np.mean(),2)
+    median=np.median(cal_result_np)
+
+    title='{}转债跌>正股数：{}'.format(current,num)
+    content=f'转债跌>正股数：{num}\n可转债涨幅>=0：{plug_count}\n可转债涨幅<0：{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}'
+
     try:
         sender_139(title,content)
     except Exception as e:
@@ -222,51 +267,8 @@ def find_zz_zg_diff():
     else:
         logger.info('入库成功')
 
-    try:
-        search_sql = 'select `溢价率` from `tb_jsl_{}`'.format(date_str)
-        cursor.execute(search_sql)
 
-    except Exception as e:
-        print(e)
 
-    else:
-        content = cursor.fetchall()
-        data = []
-        for item in content:
-            data.append(item[0])
-
-    try:
-        search_sql = 'select `溢价率` from `tb_bond_jisilu`'
-        cursor.execute(search_sql)
-
-    except Exception as e:
-        print(e)
-
-    else:
-        content = cursor.fetchall()
-        data = []
-        for item in content:
-            data.append(item[0])
-
-        np_data = np.array(data)
-        max_value = np.round(np_data.max(), 2)
-        min_value = np.round(np_data.min(), 2)
-        mean = np.round(np_data.mean(), 2)
-        median = np.round(np.median(np_data), 2)
-        count = len(np_data)
-        t_value = (current, float(mean), float(max_value), float(min_value), float(median), count)
-        print(t_value)
-        update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
-        # con=get_mysql_conn('d')
-        try:
-            cursor.execute(update_sql, t_value)
-            con.commit()
-
-        except Exception as e:
-            print(e)
-            con.rollback()
-        else:
-            print('update')
 
 
 # 查看历史数据
@@ -287,7 +289,7 @@ def find_zz_zg_diff_history():
         try:
             cursor.execute(query_cmd)
         except Exception as e:
-            print(e)
+            logger.error(e)
             con.rollback()
             continue
 
@@ -295,7 +297,7 @@ def find_zz_zg_diff_history():
             get_count = cursor.fetchone()
             num = get_count[0]
             num_list.append((start,num))
-    print(num_list)
+    # print(num_list)
     # print(sorted(num_list,key=lambda x:x[1],reverse=True))
     con.close()
 
@@ -306,10 +308,10 @@ def find_zz_zg_diff_history():
         cur.executemany(insert_sql,(num_list))
         con2.commit()
     except Exception as e:
-        print(e)
+        logger.error(e)
         con2.rollback()
     else:
-        print('入库成功')
+        logger.info('入库成功')
 
 
 def avg_yjl_history():
@@ -330,7 +332,7 @@ def avg_yjl_history():
             cursor.execute(search_sql)
 
         except Exception as e:
-            print(e)
+            logger.error(e)
 
         else:
             content = cursor.fetchall()
@@ -345,17 +347,17 @@ def avg_yjl_history():
             median=np.round(np.median(np_data),2)
             count=len(np_data)
             t_value=(date_str,float(mean),float(max_value),float(min_value),float(median),count)
-            print(t_value)
+            # print(t_value)
 
             try:
                 cursor2.execute(update_sql,t_value)
                 con2.commit()
 
             except Exception as e:
-                print(e)
+                logger.error(e)
                 con2.rollback()
             else:
-                print('update')
+                logger.info('update')
 
 
         finally:
