@@ -245,8 +245,8 @@ def find_zz_zg_diff():
     mean=round(cal_result_np.mean(),2)
     median=np.median(cal_result_np)
 
-    title='{}转债跌>正股数：{}'.format(current,num)
-    content=f'转债跌>正股数：{num}\n可转债涨幅>=0：{plug_count}\n可转债涨幅<0：{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}'
+    title='{}转债跌》正股数：{}'.format(current,num)
+    content=f'转债跌>正股数：{num}\n可转债涨幅>=0----{plug_count}\n可转债涨幅<0----{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}'
 
     try:
         sender_139(title,content)
@@ -266,8 +266,6 @@ def find_zz_zg_diff():
         con.rollback()
     else:
         logger.info('入库成功')
-
-
 
 
 

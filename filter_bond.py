@@ -12,7 +12,7 @@ import numpy as np
 pd.set_option('display.max_rows',None)
 
 # 条件
-OUTSTANDING_MAX=50 # 流通 x亿
+OUTSTANDING_MAX=70 # 流通 x亿
 TOTAL_MAX=500 # 总市值
 
 YIJIALU = 10 # 溢价率
@@ -21,7 +21,7 @@ ZZ_PRICE = 110 # 转债价格
 REMAIN_SHARE = 10 # 转股剩余比例
 
 # today = datetime.datetime.now().strftime('%Y-%m-%d')
-today='2019-05-13'
+today='2019-05-24'
 
 engine = get_engine('db_stock',True)
 jsl_df = pd.read_sql('tb_bond_jisilu',con=engine)
@@ -66,7 +66,7 @@ def main(jsl_df):
     jsl_df=double_low(jsl_df)
     zg_list = list(jsl_df['正股代码'].values)
     zg_df = basic_df[basic_df['code'].isin(zg_list)]
-    target_df = market_share(zg_df)
-    print(target_df)
+    zg_df = market_share(zg_df)
+    print(zg_df)
 
 main(jsl_df)
