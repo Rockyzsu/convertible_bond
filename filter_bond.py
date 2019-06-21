@@ -8,7 +8,7 @@ from setting import get_engine
 import pandas as pd
 import datetime
 import numpy as np
-
+# pd.set_option('expand_frame_repr', False)
 pd.set_option('display.max_rows',None)
 
 # 条件
@@ -21,7 +21,7 @@ ZZ_PRICE = 110 # 转债价格
 REMAIN_SHARE = 10 # 转股剩余比例
 
 # today = datetime.datetime.now().strftime('%Y-%m-%d')
-today='2019-05-24'
+today='2019-06-14'
 
 engine = get_engine('db_stock',True)
 jsl_df = pd.read_sql('tb_bond_jisilu',con=engine)
@@ -48,6 +48,7 @@ def market_share(zg_df):
     zg_df=zg_df.sort_values(by='outstanding_shizhi')
     zg_df.reset_index(inplace=True,drop=True)
     # print(zg_df[['code','name','outstanding_shizhi','totals_shizhi']])
+
     return zg_df
 
 # 双低
@@ -68,5 +69,7 @@ def main(jsl_df):
     zg_df = basic_df[basic_df['code'].isin(zg_list)]
     zg_df = market_share(zg_df)
     print(zg_df)
+    con=get_engine('db_bond',local=True)
+    zg_df.to_sql('double_low_2019-06-17',con=con)
 
 main(jsl_df)

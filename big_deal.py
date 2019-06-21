@@ -118,7 +118,7 @@ class BigDeal(object):
             if ret.get('status') == -1:
                 self.logger.error('保存失败 >>>> code={}, date={}'.format(code, date))
             else:
-                self.logger.error('保存成功 >>>> code={}, date={}'.format(code, date))
+                self.logger.info('保存成功 >>>> code={}, date={}'.format(code, date))
 
     def store(self, code, df):
         df['code'] = code

@@ -9,7 +9,7 @@ import pandas as pd
 import requests
 from setting import get_mysql_conn,llogger
 import tushare as ts
-logger = llogger('log/'+'bond_statistic')
+logger = llogger('log/'+'cb_index')
 
 # 获取当天的记录
 def today():
