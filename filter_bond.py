@@ -18,10 +18,10 @@ TOTAL_MAX=500 # 总市值
 YIJIALU = 10 # 溢价率
 ZZ_PRICE = 110 # 转债价格
 
-REMAIN_SHARE = 10 # 转股剩余比例
+REMAIN_SHARE = 5 # 转股剩余比例
 
-# today = datetime.datetime.now().strftime('%Y-%m-%d')
-today='2019-06-27'
+today = datetime.datetime.now().strftime('%Y-%m-%d')
+# today='2019-07-01'
 
 engine = get_engine('db_stock',True)
 jsl_df = pd.read_sql('tb_bond_jisilu',con=engine)
@@ -32,6 +32,7 @@ price_df = pd.read_sql(today,con=engine_daily)
 
 # 市值选择
 def market_share(zg_df):
+
     for i in zg_df.index:
 
         p=price_df[price_df['code']==zg_df.loc[i]['code']]['trade'].values[0]
@@ -68,8 +69,12 @@ def main(jsl_df):
     zg_list = list(jsl_df['正股代码'].values)
     zg_df = basic_df[basic_df['code'].isin(zg_list)]
     zg_df = market_share(zg_df)
-    print(zg_df)
+    # print(zg_df)
     con=get_engine('db_bond',local=True)
-    zg_df.to_sql('double_low_2019-06-27',con=con)
+    zg_df.to_sql('double_low_{}'.format(today),con=con)
 
-main(jsl_df)
+if __name__=='__main__':
+    if ts.is_holiday(today):
+        exit(0)
+
+    main(jsl_df)
