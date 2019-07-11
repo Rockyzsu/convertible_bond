@@ -240,13 +240,18 @@ def find_zz_zg_diff():
         cal_result_list.append(i[0])
 
     cal_result_np=np.array(cal_result_list)
+    large_than_zero = len(cal_result_np[cal_result_np>=0])
+    # small_than_zero = len(cal_result_np[cal_result_np<0])
+    total_len = len(cal_result_np)
+    raise_ratio = round(large_than_zero/total_len*100,2)
     max_v=cal_result_np.max()
     min_v=cal_result_np.min()
     mean=round(cal_result_np.mean(),2)
-    median=np.median(cal_result_np)
+    median=round(np.median(cal_result_np),2)
 
-    title='{}转债跌》正股数：{}'.format(current,num)
-    content=f'转债跌>正股数：{num}\n可转债涨幅>=0----{plug_count}\n可转债涨幅<0----{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}'
+    ripple_ratio = round(cal_result_np.var(),2)
+    title='{}转债跌大于正股数：{}'.format(current,num)
+    content=f'转债上涨比例：{raise_ratio}\n转债跌>正股数：{num}\n可转债涨幅>=0----{plug_count}\n可转债涨幅<0----{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}\n涨幅波动的方差：{ripple_ratio}'
 
     try:
         sender_139(title,content)

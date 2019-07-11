@@ -64,7 +64,9 @@ def loop_data():
     for idx,row in df.iterrows():
         code = row['可转债代码']
         name=row['可转债名称']
+
         ret_df = daily(code)
+
         if ret_df is not None:
             if len(ret_df)==1:
                 open=np_to_py_float(list(ret_df['open'].values)[0])
@@ -87,6 +89,7 @@ def loop_data():
 
 
 def daily(code):
+    global cons
     retry =5
     t = 0
     df=None
@@ -94,7 +97,9 @@ def daily(code):
         try:
             df = ts.bar(code, conn=cons, freq='D', start_date=today, end_date='')
         except Exception as e:
+            logger.error(e)
             cons = ts.get_apis()
+
             t += 1
         else:
             if df is not None and not df.empty:
