@@ -39,7 +39,7 @@ def read_data_source(today):
     except Exception as e:
         logger.error(e)
 
-        sendmail('读取表tb_jsl_{}失败'.format(today),'{}'.format(today))
+        sendmail('代码{}出错\n读取表tb_jsl_{}失败'.format('bond_daily',today),'{}'.format(today))
         return None
     else:
         return df
@@ -86,8 +86,6 @@ def loop_data():
                     logger.error(e)
 
 
-
-
 def daily(code):
     global cons
     retry =5
@@ -116,6 +114,9 @@ def daily(code):
 if __name__=='__main__':
     if ts.is_holiday(today):
         logger.info('假期')
-        exit(0)
+        ts.close_apis(cons)
+        exit()
+
+    logger.info('{}-->获取每天的开高低收数据'.format(today))
     loop_data()
     ts.close_apis(cons)
