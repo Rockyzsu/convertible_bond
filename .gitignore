@@ -14,3 +14,4 @@ bases.csv
 *.png
 config.py
 conf.py
+email_list.py
