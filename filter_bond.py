@@ -21,7 +21,7 @@ ZZ_PRICE = 110 # 转债价格
 REMAIN_SHARE = 5 # 转股剩余比例
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
-# today='2019-07-05'
+# today='2019-07-31'
 
 engine = get_engine('db_stock',True)
 jsl_df = pd.read_sql('tb_bond_jisilu',con=engine)
@@ -71,7 +71,7 @@ def main(jsl_df):
     zg_df = market_share(zg_df)
     print(zg_df)
     con=get_engine('db_bond',local=True)
-    zg_df.to_sql('double_low_{}'.format(today),con=con)
+    zg_df.to_sql('double_low_{}'.format(today),con=con,if_exists='replace')
 
 if __name__=='__main__':
     if ts.is_holiday(today):
