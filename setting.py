@@ -4,6 +4,7 @@
 import datetime
 import logging
 import smtplib
+import time
 from email.mime.text import MIMEText
 from sqlalchemy import create_engine
 import os
@@ -12,6 +13,13 @@ import json
 import pymysql
 import tushare as ts
 import config
+import random
+from email_list import email_list, email_list1
+from email.mime.text import MIMEText
+from email.header import Header
+from email.mime.multipart import MIMEMultipart
+from email.utils import parseaddr, formataddr
+import redis
 
 cfg_file = os.path.join(os.path.dirname(__file__), 'data.cfg')
 with open(cfg_file, 'r') as f:
@@ -38,11 +46,14 @@ SMTP_HOST = json_data['SMTP_HOST']
 FROM_MAIL = json_data['FROM_MAIL']
 TO_MAIL = json_data['TO_MAIL']
 Ali_DB = json_data['Ali_DB']
+EMAIL_USER_XT = json_data['EMAIL_USER_XT']
 
 MYSQL_XGD_HOST = json_data['MYSQL_XGD_HOST']
 MYSQL_XGD_USER = json_data['MYSQL_XGD_USER']
 MYSQL_XGD_PASSWORD = json_data['MYSQL_XGD_PASSWORD']
 MYSQL_XGD_PORT = json_data['MYSQL_XGD_PORT']
+EMAIL_USER_ALY = json_data['EMAIL_USER_ALY']
+LOGIN_EMAIL_ALY_PASS = json_data['LOGIN_EMAIL_ALY_PASS']
 DATA_PATH = json_data['DATA_PATH']
 
 
@@ -108,8 +119,34 @@ class WechatSend:
         content = '{} Warning {} : ceiling volume is {}'.format(current, name, vol)
         itchat.send(content, toUserName=self.toName)
 
-    def send_content(self,content):
+    def send_content(self, content):
         itchat.send(content, toUserName=self.toName)
+
+
+def sendmail_many(content, subject):
+    '''
+    发送邮件
+    '''
+    # obj = ClsLogger(__file__)
+
+    username = LOGIN_EMAIL_USER
+    password = LOGIN_EMAIL_PASS
+    smtp_host = SMTP_HOST
+    smtp = smtplib.SMTP(smtp_host)
+    TO_MAIL = ','.join(email_list)
+    # smtp.ehlo()
+    # smtp.starttls()
+    try:
+        smtp.login(username, password)
+        msg = MIMEText(content, 'plain', 'utf-8')
+        msg['from'] = FROM_MAIL
+        msg['to'] = TO_MAIL
+        msg['subject'] = subject
+        smtp.sendmail(msg['from'], msg['to'], msg.as_string())
+        smtp.quit()
+    except Exception as e:
+        # obj.error(e)
+        print('>>>>>{}'.format(e))
 
 
 def sendmail(content, subject):
@@ -190,6 +227,108 @@ def llogger(filename):
     return logger
 
 
+def _format_addr(s):
+    name, addr = parseaddr(s)
+    return formataddr((Header(name, 'utf-8').encode(), addr))
+
+
+# 使用阿里云发送
+def send_aliyun(title, content, types='plain'):
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    username = EMAIL_USER_ALY  # 阿里云
+    password = LOGIN_EMAIL_ALY_PASS
+    logger = llogger('send_mail_aliyun')
+    obj = smtplib.SMTP()
+    msg = MIMEText(content, types, 'utf-8')
+    subject = title
+    msg['Subject'] = Header(subject, 'utf-8')
+    msg['From'] = _format_addr('{} <{}>'.format('datasender', username))
+    msg['To'] = TO_MAIL
+
+    try:
+        obj.connect('smtp.qiye.aliyun.com', 25)
+        obj.login(username, password)
+        obj.sendmail(username, TO_MAIL, msg.as_string())
+
+    except Exception as e:
+        logger.error(e)
+        logger.error(TO_MAIL)
+        time.sleep(10 + random.randint(1, 5))
+        obj = smtplib.SMTP()
+        obj.connect('smtp.qiye.aliyun.com', 25)
+        obj.login(username, password)
+        obj.sendmail(username, TO_MAIL, msg.as_string())
+
+
+def sender_139_jsl(title, content, types='plain'):
+    r = redis.StrictRedis('10.18.6.46', db=10, decode_responses=True)
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    key = 'email_{}'.format(today)
+    for i in email_list:
+        r.sadd(key, i)
+
+    username = EMAIL_USER_XT
+    password = LOGIN_EMAIL_PASS
+    logger = llogger('send_mail')
+    obj = smtplib.SMTP()
+
+    try:
+        username = 'datasender@30daydo.com'
+        obj.connect('smtp.qiye.aliyun.com', 25)
+        obj.login(username, 'Jsl12345')
+        # for to_name in email_list1:
+        # to_='xtgotousa@139.com'
+        # send_set = set(email_list)
+
+        failed_dict = {}
+        while 1:
+            # for name in send_set:
+            name = r.srandmember(key)
+
+            if name is None:
+                break
+
+            msg = MIMEText(content, types, 'utf-8')
+            subject = title
+            msg['Subject'] = Header(subject, 'utf-8')
+            msg['From'] = _format_addr('{} <{}>'.format('datasender', username))
+            msg['To'] = name
+            # print(name)
+            # to_list=[to_]+email_list1
+            # msg['Bcc']=','.join(email_list1)
+            # print(f'send to {to_name}')
+            try:
+                obj.sendmail(username, [name], msg.as_string())
+            except Exception as e:
+                logger.error(e)
+                logger.error(name)
+                time.sleep(10 + random.randint(1, 5))
+
+                failed_dict.setdefault(name, 0)
+                failed_dict[name] += 1
+
+                if failed_dict[name] >= 2:
+                    logger.error(f'{name} failed for 3 times, remove')
+                    r.srem(key, name)
+                obj = smtplib.SMTP()
+
+                obj.connect('smtp.qiye.aliyun.com', 25)
+                obj.login(username, password)
+
+                continue
+
+            else:
+                logger.info(f'{name} has been sent')
+                r.srem(key, name)
+                time.sleep(10 + random.randint(1, 5))
+
+
+    except Exception as e:
+        logger.error(e)
+        obj.connect('smtp.qiye.aliyun.com', 25)
+        obj.login(username, password)
+
+
 def trading_time():
     '''
 
@@ -226,10 +365,19 @@ def is_holiday():
     return ts.is_holiday(current)
 
 
-# if __name__ == '__main__':
-#     msg=WechatSend(u'wei')
-#     msg.send_price('hsdq',12,12,'sell')
+def push_redis():
+    r = redis.StrictRedis('10.18.6.46', db=10, decode_responses=True)
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    key = 'email_{}'.format(today)
+    for i in email_list:
+        r.sadd(key, i)
+
+
+if __name__ == '__main__':
+    #     msg=WechatSend(u'wei')
+    #     msg.send_price('hsdq',12,12,'sell')
     # print(FROM_MAIL)
     # mylogger('test.log','just for test')
     # trading_time()
     # sendmail('content--------', 'subject------')
+    push_redis()
