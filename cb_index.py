@@ -7,7 +7,7 @@ import datetime
 import re
 import pandas as pd
 import requests
-from setting import get_mysql_conn,llogger
+from settings import get_mysql_conn,llogger
 import tushare as ts
 logger = llogger('log/'+'cb_index')
 

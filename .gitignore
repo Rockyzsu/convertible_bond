@@ -15,3 +15,5 @@ bases.csv
 config.py
 conf.py
 email_list.py
+setting.py
+settings.py
