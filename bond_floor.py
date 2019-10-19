@@ -1,6 +1,6 @@
 # 计算债底 大概每个月更新一次
 import tushare as ts
-from setting import get_engine, get_mysql_conn
+from settings import get_engine, get_mysql_conn
 import pandas as pd
 # api = ts.get_apis()
 # code = '123012'

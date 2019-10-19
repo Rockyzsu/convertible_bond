@@ -12,7 +12,7 @@ import tushare as ts
 logger = llogger('log/'+'cb_index')
 
 # 获取当天的记录
-def today():
+def get_today_index():
     url='https://www.jisilu.cn/data/cbnew/cb_index_quote/'
     headers = {'Host': 'www.jisilu.cn',
                'X-Requested-With': 'XMLHttpRequest',
@@ -119,4 +119,4 @@ if __name__ == '__main__':
         exit()
     else:
         # history_data()  # 第一次获取历史数据， 后面获取每一天的数据
-        today()
+        get_today_index()

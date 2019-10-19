@@ -1,12 +1,10 @@
 # -*-coding=utf-8-*-
 
-# @Time : 2019/4/24 16:55
-# @File : task_zz_drop_than_zg.py
-from bond_statistics import find_zz_zg_diff
-
+# @Time : 2019/10/19 14:56
+# @File : task_double_low.py
 import tushare as ts
 import datetime
-
+from filter_bond import main
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 cons=ts.get_apis()
 
@@ -17,6 +15,6 @@ if __name__=='__main__':
 
     else:
         # TODO
-        find_zz_zg_diff()
+        main()
 
         ts.close_apis(cons)

@@ -5,51 +5,36 @@ import logging
 import os
 import random
 import time
-from send_mail import sender_139
+# from send_mail import sender_139
 import pymongo
 import tushare as ts
 import pandas as pd
-from setting import get_engine
+from settings import get_engine,send_aliyun,QQ_MAIL,llogger
 import config
 
+# 大单定义 手数, 需要在大单数据获取完成后
+BIG_DEAL = 1000
+
+# 获取的历史天数的数据
+DELTA_DAY = 35
+logger=llogger('log/big_deal.log')
 class BigDeal(object):
 
     def __init__(self):
 
         # self.df = self.get_tick()
-        self.logger = self.llogger('log/'+'big_deal')
         today = datetime.datetime.now().strftime('%Y-%m-%d')
+        # today = '2019-10-18'
 
         if ts.is_holiday(today):
-            self.logger.info('{}假期 >>>>>'.format(today))
-            return
+            logger.info('{}假期 >>>>>'.format(today))
+            exit()
 
-        self.db_stock_engine = get_engine('db_stock', True)
+        self.db_stock_engine = get_engine('db_stock', 'local')
         self.jisilu_df = self.get_code()
         self.code_name_dict=dict(zip(list(self.jisilu_df['可转债代码'].values),list(self.jisilu_df['可转债名称'].values)))
         self.db = pymongo.MongoClient(config.mongodb_host, config.mongodb_port)
 
-    def llogger(self, filename):
-        logger = logging.getLogger(filename)  # 不加名称设置root logger
-        logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(
-            '[%(asctime)s][%(filename)s][line: %(lineno)d]\[%(levelname)s] ## %(message)s)',
-            datefmt='%Y-%m-%d %H:%M:%S')
-        # 使用FileHandler输出到文件
-        prefix = os.path.splitext(filename)[0]
-        fh = logging.FileHandler(prefix + '.log')
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        # 使用StreamHandler输出到屏幕
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
-        # 添加两个Handler
-        logger.addHandler(ch)
-        logger.addHandler(fh)
-        # logger.info('this is info message')
-        # logger.warning('this is warn message')
-        return logger
 
     def get_ticks(self, code, date):
         df = ts.get_tick_data(code, date=date, src='tt')
@@ -58,7 +43,7 @@ class BigDeal(object):
         return df
 
     # 从mongo获取数据 默认分钟 1000张
-    def get_volume_distribition(self,code,date,types='min',big_deal=1000):
+    def get_volume_distribition(self,code,date,types='min',big_deal=BIG_DEAL):
         # code='110030'
         # date='2019-04-02'
 
@@ -91,15 +76,15 @@ class BigDeal(object):
                 fs_df = ts.get_tick_data(code, date=date, src='tt')
 
             except Exception as e:
-                self.logger.error('获取tick失败>>>>code={},date'.format(code, date))
-                self.logger.error(e)
+                logger.error('获取tick失败>>>>code={},date'.format(code, date))
+                logger.error(e)
                 time.sleep(random.randint(2, 5))
 
             else:
                 if fs_df is not None and len(fs_df) > 0:
                     break
                 else:
-                    self.logger.error('>>>>code={},date={} 获取行情重试 {}次'.format(code, date, i))
+                    logger.error('>>>>code={},date={} 获取行情重试 {}次'.format(code, date, i))
 
         return fs_df
 
@@ -119,9 +104,9 @@ class BigDeal(object):
             ret = self.store(code, fs_df)
 
             if ret.get('status') == -1:
-                self.logger.error('保存失败 >>>> code={}, date={}'.format(code, date))
+                logger.error('保存失败 >>>> code={}, date={}'.format(code, date))
             else:
-                self.logger.info('保存成功 >>>> code={}, date={}'.format(code, date))
+                logger.info('保存成功 >>>> code={}, date={}'.format(code, date))
 
     def store(self, code, df):
         df['code'] = code
@@ -132,8 +117,8 @@ class BigDeal(object):
         try:
             self.db['cb_deal'][code].insert_many(js)
         except Exception as e:
-            self.logger.error(e)
-            self.logger.error('插入数据失败')
+            logger.error(e)
+            logger.error('插入数据失败')
             return {'status': -1, 'code': code}
         else:
             return {'status': 0, 'code': code}
@@ -142,20 +127,22 @@ class BigDeal(object):
         df = pd.read_sql('tb_bond_jisilu', con=self.db_stock_engine)
         return df
 
+    # 获取大单数据
     def loop_date(self,today=True):
 
         # 获取当天数据，18点之后
         if today:
             d = datetime.date.today().strftime('%Y-%m-%d')
             if ts.is_holiday(d):
-                self.logger.info('holiday,skip>>>>{}'.format(d))
+                logger.info('holiday,skip>>>>{}'.format(d))
             else:
-                self.logger.info('going>>>>{}'.format(d))
+                logger.info('going>>>>{}'.format(d))
                 self.loop_code(d)
+
         # 获取一周的数据看看
 
         else:
-            delta = 7
+            delta = DELTA_DAY
             for i in range(1, delta + 1):
                 d = (datetime.date.today() + datetime.timedelta(days=i * -1)).strftime('%Y-%m-%d')
                 if ts.is_holiday(d):
@@ -164,10 +151,11 @@ class BigDeal(object):
                     print('going>>>>{}'.format(d))
                     self.loop_code(d)
 
+    # 发送大单数据到手机
     def analysis(self,date=None,head=300):
         if date is None:
             date=datetime.date.today().strftime('%Y-%m-%d')
-        # date='2019-05-08'
+            # date='2019-10-18'
         kzz_big_deal_count =[]
 
         for code in self.jisilu_df['可转债代码'].values:
@@ -178,17 +166,17 @@ class BigDeal(object):
         send_content=[]
 
         for item in kzz_big_deal_order[:head]:
-            self.logger.info('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
+            logger.info('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
             send_content.append('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
         # 入库的
         big_deal_doc = self.db['db_stock']['big_deal_logger']
         for item in kzz_big_deal_order:
             d={'Date':date,'name':self.code_name_dict.get(item[0]), 'times':int(item[1])}
             try:
-                big_deal_doc.insert(d)
+                big_deal_doc.insert_one(d) # 写入mongo
             except Exception as e:
-                self.logger.error(e)
-                self.logger.error(d)
+                logger.error(e)
+                logger.error(d)
             # send_content.append('{} ::: 大单出现次数 {}'.format(self.code_name_dict.get(item[0]),item[1]))
 
         content ='\n'.join(send_content)
@@ -196,17 +184,17 @@ class BigDeal(object):
 
         try:
 
-            sender_139(title,content)
+            send_aliyun(title,content,QQ_MAIL)
 
         except Exception as e:
-            self.logger.error(e)
+            logger.error(e)
         else:
-            self.logger.info('发送成功')
+            logger.info('发送成功')
 
 
 def main():
     obj = BigDeal()
-    obj.analysis(head=30)
+    obj.loop_date(False) # 获取历史大单数据
 
 if __name__ == '__main__':
 

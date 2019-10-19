@@ -1,9 +1,10 @@
 # -*-coding=utf-8-*-
 
-# @Time : 2019/4/24 16:55
-# @File : task_zz_drop_than_zg.py
-from bond_statistics import find_zz_zg_diff
+# @Time : 2019/4/4 17:08
+# @File : task_cb_deal.py
+# 获取每天的大单数据
 
+from big_deal import BigDeal
 import tushare as ts
 import datetime
 
@@ -17,6 +18,7 @@ if __name__=='__main__':
 
     else:
         # TODO
-        find_zz_zg_diff()
+        obj = BigDeal()
+        obj.loop_date()
 
         ts.close_apis(cons)

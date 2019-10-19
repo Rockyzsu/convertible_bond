@@ -2,17 +2,17 @@
 # @Time : 2019/9/2 9:35
 # @File : send_bond_info.py
 
-from setting import get_engine
+from settings import get_engine
 import pandas as pd
 import datetime
-from setting import sender_139_jsl
+from settings import sender_139_jsl,
 
 def calculation(x):
 
     return x
 
 def cb_info():
-    con = get_engine('db_stock',local=True)
+    con = get_engine('db_stock','local')
     df = pd.read_sql('tb_bond_jisilu',con=con)
 
     df['可转债综合价格'] = df['可转债价格'] + df['溢价率']

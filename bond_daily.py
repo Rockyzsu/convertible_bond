@@ -3,7 +3,7 @@
 # @Time : 2019/7/1 16:50
 # @File : bond_daily.py
 # 收集可转债的市场全景图
-from setting import get_engine,sendmail,llogger,get_mysql_conn
+from settings import get_engine,sendmail,llogger,get_mysql_conn
 import pandas as pd
 import datetime
 from config import token
@@ -11,7 +11,7 @@ import tushare as ts
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 today_fmt = datetime.datetime.now().strftime('%Y%m%d')
 cons=ts.get_apis()
-logger=llogger(__file__)
+logger=llogger('log/bond_daily.log')
 # ts.set_token(token)
 
 # pro = ts.pro_api()
@@ -33,7 +33,7 @@ def creat_table(day):
         return True
 
 def read_data_source(today):
-    engine = get_engine('db_jisilu',True)
+    engine = get_engine('db_jisilu','local')
     try:
         df = pd.read_sql('tb_jsl_{}'.format(today),con=engine)
     except Exception as e:
@@ -83,6 +83,7 @@ def loop_data():
                     cursor.execute(insert_cmd,(today,code,name,open,close,high,low,vol,amount))
                     conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.error(e)
 
 

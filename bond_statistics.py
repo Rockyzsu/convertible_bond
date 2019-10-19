@@ -5,11 +5,8 @@ Contact: weigesysu@qq.com
 '''
 
 import datetime
-import pymongo
-from send_mail import sender_139
-from scipy import stats
 import tushare as ts
-from setting import get_engine, get_mysql_conn,llogger
+from settings import get_engine, get_mysql_conn,llogger,send_aliyun,QQ_MAIL
 import pandas as pd
 import numpy as np
 # from filter_stock import Filter_Stock
@@ -96,7 +93,7 @@ def save_list_mongo(source_list):
     last_str = '\n'.join(last_str)
     content = '跌幅前10:::\n' + last_str + '\n涨幅前10:::\n' + top_str
     try:
-        sender_139(title, content)
+        send_aliyun(title, content,QQ_MAIL)
     except Exception as e:
         logger.error(e)
 
@@ -177,13 +174,11 @@ def find_lower_bond():
 # 统计每天转债跌得比正股多的
 def find_zz_zg_diff():
     current=datetime.date.today().strftime('%Y-%m-%d')
+    # current ='2019-10-18'
     if ts.is_holiday(current):
         logger.info('假期')
         return
 
-    # engine=get_engine('db_stock','local')
-    # df = pd.read_sql('tb_bond_jisilu',con=engine)
-    # df[(df['正股涨跌幅']<=0) & (df['正股涨跌幅']>=df['可转债涨幅'])]
     con=get_mysql_conn('db_stock','local')
     cursor=con.cursor()
     query_cmd = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
@@ -212,7 +207,6 @@ def find_zz_zg_diff():
         data = []
         for item in content:
             data.append(item[0])
-
         np_data = np.array(data)
         max_value = np.round(np_data.max(), 2)
         min_value = np.round(np_data.min(), 2)
@@ -254,7 +248,7 @@ def find_zz_zg_diff():
     content=f'转债上涨比例：{raise_ratio}\n转债跌>正股数：{num}\n可转债涨幅>=0----{plug_count}\n可转债涨幅<0----{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}\n涨幅波动的方差：{ripple_ratio}'
 
     try:
-        sender_139(title,content)
+        send_aliyun(title,content,QQ_MAIL)
     except Exception as e:
         logger.error(e)
     else:
