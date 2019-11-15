@@ -9,7 +9,7 @@ import pandas as pd
 import requests
 from settings import get_mysql_conn,llogger
 import tushare as ts
-logger = llogger('log/'+'cb_index')
+logger = llogger('log/'+'cb_index.log')
 
 # 获取当天的记录
 def get_today_index():
@@ -114,9 +114,12 @@ def history_data():
 if __name__ == '__main__':
     current = datetime.datetime.now().strftime('%Y-%m-%d')
     logger.info('Start')
+    con=ts.get_apis()
     if ts.is_holiday(current):
         logger.info('Holiday')
+        ts.close_apis(con)
         exit()
     else:
         # history_data()  # 第一次获取历史数据， 后面获取每一天的数据
         get_today_index()
+        ts.close_apis(con)

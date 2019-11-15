@@ -3,6 +3,7 @@
 # @Time : 2019/5/12 16:52
 # @File : filter_bond.py
 # 根据条件选择债券
+
 import pymongo
 import config
 import tushare as ts
@@ -24,7 +25,7 @@ ZZ_PRICE = 110  # 转债价格
 REMAIN_SHARE = 5  # 转股剩余比例
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
-# today='2019-10-18'
+# today='2019-11-04'
 
 engine = get_engine('db_stock', 'local')
 
@@ -114,7 +115,7 @@ def weekly_drop_rank():
         d['name']=code_dict.get(i[0])
         d['percent']=i[1]
         d['update']=today_str
-        db['db_stock'][f'{today_str}_week_drop'].insert_one(d)
+        db['db_price_drop'][f'{today_str}_week_drop'].insert_one(d)
 
 
 def get_low_price(code,start):

@@ -28,7 +28,7 @@ def cb_info():
     df1.to_sql(f'double_low_{today}',con=conn2)
 
     try:
-        send_aliyun(title, send_content, QQ_MAIL)
+        send_aliyun(title, send_content, QQ_MAIL,types='html')
         # print(QQ_MAIL)
         # jsl_mail_sender(title,send_content,types='html')
     except Exception as e:
