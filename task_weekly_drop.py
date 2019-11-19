@@ -14,12 +14,12 @@ cons=ts.get_apis()
 
 if __name__=='__main__':
 
-    # if ts.is_holiday(today):
-    #     ts.close_apis(cons)
-    #     exit()
-    #
-    # else:
+    if ts.is_holiday(today):
+        ts.close_apis(cons)
+        exit()
+
+    else:
     #     TODO
-        weekly_drop_rank()
+        weekly_drop_rank(current=True) # 正常运行时current = True
 
         ts.close_apis(cons)

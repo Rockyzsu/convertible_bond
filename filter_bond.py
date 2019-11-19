@@ -25,6 +25,7 @@ ZZ_PRICE = 110  # 转债价格
 REMAIN_SHARE = 5  # 转股剩余比例
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
+# today='2019-11-15'
 
 engine = get_engine('db_stock', 'local')
 
@@ -70,12 +71,18 @@ def remain_share(jsl_df):
 
 # 计算一周，一个月，一个季度跌幅最多的债
 # work
-def weekly_drop_rank():
+def weekly_drop_rank(current=True):
+
+    if current:
+        today = datetime.datetime.today()
+    else:
+        # 修复问题使用
+        today = datetime.datetime.strptime('2019-11-15','%Y-%m-%d')
+
     code_list = jsl_df['可转债代码'].values
     name_list = jsl_df['可转债名称'].values
     yjl = jsl_df['溢价率'].values
 
-    today = datetime.datetime.today()
 
     week = today + datetime.timedelta(days=-7)
     month = today+ datetime.timedelta(days=-31)
