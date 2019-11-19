@@ -9,6 +9,7 @@ import tushare as ts
 from settings import get_engine, get_mysql_conn,llogger,send_aliyun,QQ_MAIL
 import pandas as pd
 import numpy as np
+
 # from filter_stock import Filter_Stock
 # 筛选出 新股 的可转债
 # current = datetime.datetime.now()
@@ -20,7 +21,7 @@ import numpy as np
 # kzz_name_list = df['可转债名称'].values
 # db = pymongo.MongoClient('10.18.6.46', port=27001)
 
-logger = llogger('log/'+'bond_statistic')
+logger = llogger('log/'+'bond_statistic.log')
 # 获取次新股的可转债数据
 def get_zhenggu():
     obj = Filter_Stock()
@@ -310,7 +311,7 @@ def find_zz_zg_diff_history():
     else:
         logger.info('入库成功')
 
-
+# 计算历史平均溢价率
 def avg_yjl_history():
     con=get_mysql_conn('db_jisilu','local')
     con2=get_mysql_conn('db_stock','local')

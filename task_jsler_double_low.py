@@ -1,6 +1,7 @@
 # -*-coding=utf-8-*-
 # @Time : 2019/9/2 9:35
 # @File : send_bond_info.py
+# 发送邮件的
 
 from settings import get_engine
 import pandas as pd
@@ -8,7 +9,6 @@ import datetime
 from settings import jsl_mail_sender, llogger, send_aliyun, QQ_MAIL
 
 logger = llogger('log/task_jsler_double_low.log')
-
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 
 

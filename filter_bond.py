@@ -25,7 +25,6 @@ ZZ_PRICE = 110  # 转债价格
 REMAIN_SHARE = 5  # 转股剩余比例
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
-# today='2019-11-04'
 
 engine = get_engine('db_stock', 'local')
 
@@ -74,47 +73,57 @@ def remain_share(jsl_df):
 def weekly_drop_rank():
     code_list = jsl_df['可转债代码'].values
     name_list = jsl_df['可转债名称'].values
+    yjl = jsl_df['溢价率'].values
+
     today = datetime.datetime.today()
-    week = today + datetime.timedelta(days=-8)
+
+    week = today + datetime.timedelta(days=-7)
     month = today+ datetime.timedelta(days=-31)
     today_str = today.strftime('%Y-%m-%d')
     week_str = week.strftime('%Y-%m-%d')
     month_str = month.strftime('%Y-%m-%d')
     m_result={}
     w_result={}
-
+    price_dict ={}
     code_dict=dict(zip(code_list,name_list))
+    yjl_dict=dict(zip(code_list,yjl))
     for code in code_dict:
 
         # 周线,获取下跌的幅度
-        m_percent,w_percent = get_low_price(code=code,start=month_str)
-
+        m_percent,w_percent,last_close = get_low_price(code=code,start=month_str)
+        price_dict[code]=last_close
         w_result[code]=w_percent
         m_result[code]=m_percent
 
     m_result_list = list(sorted(m_result.items(),key=lambda x:x[1]))
     w_result_list = list(sorted(w_result.items(),key=lambda x:x[1]))
 
+    # TODO 把溢价率也写入
     # 按月
     logger.info('月度数据')
     for i in m_result_list:
         logger.info(f'{i[0]} {code_dict.get(i[0])} : {i[1]}%')
 
         d={}
-        d['code']=i[0]
-        d['name']=code_dict.get(i[0])
-        d['percent']=i[1]
-        d['update']=today_str
-        db['db_stock'][f'{today_str}_month_drop'].insert_one(d)
+        d['代码']=i[0]
+        d['名称']=code_dict.get(i[0])
+        d['当前价格']=price_dict.get(i[0])
+        d['溢价率']=yjl_dict.get(i[0])
+        d['跌幅']=i[1]
+        d['更新日期']=today_str
+        db['db_price_drop'][f'{today_str}_month_drop'].insert_one(d)
 
     logger.info('\n周度数据')
     for i in w_result_list:
         logger.info(f'{i[0]} {code_dict.get(i[0])} : {i[1]}%')
         d={}
-        d['code']=i[0]
-        d['name']=code_dict.get(i[0])
-        d['percent']=i[1]
-        d['update']=today_str
+        d['代码']=i[0]
+        d['名称']=code_dict.get(i[0])
+        d['当前价格']=price_dict.get(i[0])
+
+        d['溢价率']=yjl_dict.get(i[0])
+        d['跌幅']=i[1]
+        d['更新']=today_str
         db['db_price_drop'][f'{today_str}_week_drop'].insert_one(d)
 
 
@@ -133,7 +142,7 @@ def get_low_price(code,start):
     else:
         w_percent =  round((last_closed-w_pre_closed)/w_pre_closed*100,2)
 
-    return m_percent,w_percent
+    return m_percent,w_percent,last_closed
 
 
 

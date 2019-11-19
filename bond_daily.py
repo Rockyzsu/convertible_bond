@@ -10,6 +10,8 @@ from config import token
 import tushare as ts
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 today_fmt = datetime.datetime.now().strftime('%Y%m%d')
+# today='2019-11-18'
+# today_fmt='20191118'
 cons=ts.get_apis()
 logger=llogger('log/bond_daily.log')
 # ts.set_token(token)
