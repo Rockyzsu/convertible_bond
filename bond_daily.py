@@ -10,8 +10,8 @@ from config import token
 import tushare as ts
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 today_fmt = datetime.datetime.now().strftime('%Y%m%d')
-# today='2019-11-18'
-# today_fmt='20191118'
+# today='2019-12-11'
+# today_fmt='20191211'
 cons=ts.get_apis()
 logger=llogger('log/bond_daily.log')
 # ts.set_token(token)
@@ -70,6 +70,7 @@ def loop_data():
         ret_df = daily(code)
 
         if ret_df is not None:
+            ret_df = ret_df[today]
             if len(ret_df)==1:
                 open=np_to_py_float(list(ret_df['open'].values)[0])
                 close=np_to_py_float(list(ret_df['close'].values)[0])

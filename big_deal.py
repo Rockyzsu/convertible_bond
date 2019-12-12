@@ -18,6 +18,8 @@ BIG_DEAL = 1000
 # 获取的历史天数的数据
 DELTA_DAY = 35
 logger=llogger('log/big_deal.log')
+current_day = datetime.date.today().strftime('%Y-%m-%d')
+# current_day='2019-12-11'
 class BigDeal(object):
 
     def __init__(self):
@@ -132,12 +134,12 @@ class BigDeal(object):
 
         # 获取当天数据，18点之后
         if today:
-            d = datetime.date.today().strftime('%Y-%m-%d')
-            if ts.is_holiday(d):
-                logger.info('holiday,skip>>>>{}'.format(d))
+
+            if ts.is_holiday(current_day):
+                logger.info('holiday,skip>>>>{}'.format(current_day))
             else:
-                logger.info('going>>>>{}'.format(d))
-                self.loop_code(d)
+                logger.info('going>>>>{}'.format(current_day))
+                self.loop_code(current_day)
 
         # 获取一周的数据看看
 
@@ -155,7 +157,7 @@ class BigDeal(object):
     def analysis(self,date=None,head=300):
         if date is None:
             date=datetime.date.today().strftime('%Y-%m-%d')
-            # date='2019-10-18'
+            # date='2019-12-11'
         kzz_big_deal_count =[]
 
         for code in self.jisilu_df['可转债代码'].values:
