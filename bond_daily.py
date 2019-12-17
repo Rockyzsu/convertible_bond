@@ -10,8 +10,8 @@ from config import token
 import tushare as ts
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 today_fmt = datetime.datetime.now().strftime('%Y%m%d')
-# today='2019-12-11'
-# today_fmt='20191211'
+# today='2019-12-13'
+# today_fmt='20191213'
 cons=ts.get_apis()
 logger=llogger('log/bond_daily.log')
 # ts.set_token(token)
@@ -70,24 +70,39 @@ def loop_data():
         ret_df = daily(code)
 
         if ret_df is not None:
-            ret_df = ret_df[today]
-            if len(ret_df)==1:
-                open=np_to_py_float(list(ret_df['open'].values)[0])
-                close=np_to_py_float(list(ret_df['close'].values)[0])
-                high=np_to_py_float(list(ret_df['high'].values)[0])
-                low=np_to_py_float(list(ret_df['low'].values)[0])
-                vol=np_to_py_float(list(ret_df['vol'].values)[0])
-                amount=np_to_py_float(list(ret_df['amount'].values)[0])
-                # =list(df['vol'].values)[0]
+            try:
+                ret_df = ret_df.loc[today] # loc索引 为series
+            except Exception as e:
+                logger.error(e)
+                logger.info(code)
+                continue
 
-                insert_cmd = '''insert into `bond_{}` (`date`,`code`,`name`,`open`,`close` ,`high`,`low`,`vol`,`amount`) values (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                '''.format(today)
-                try:
-                    cursor.execute(insert_cmd,(today,code,name,open,close,high,low,vol,amount))
-                    conn.commit()
-                except Exception as e:
-                    conn.rollback()
-                    logger.error(e)
+            if isinstance(ret_df,pd.Series):
+                open = np_to_py_float(ret_df['open'])
+                close = np_to_py_float(ret_df['close'])
+                high = np_to_py_float(ret_df['high'])
+                low = np_to_py_float(ret_df['low'])
+                vol = np_to_py_float(ret_df['vol'])
+                amount = np_to_py_float(ret_df['amount'])
+            else:
+                if len(ret_df)==1:
+                    open=np_to_py_float(list(ret_df['open'].values)[0])
+                    close=np_to_py_float(list(ret_df['close'].values)[0])
+                    high=np_to_py_float(list(ret_df['high'].values)[0])
+                    low=np_to_py_float(list(ret_df['low'].values)[0])
+                    vol=np_to_py_float(list(ret_df['vol'].values)[0])
+                    amount=np_to_py_float(list(ret_df['amount'].values)[0])
+                else:
+                    open,close,high,low,vol,amount=None,None,None,None,None,None
+
+            insert_cmd = '''insert into `bond_{}` (`date`,`code`,`name`,`open`,`close` ,`high`,`low`,`vol`,`amount`) values (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            '''.format(today)
+            try:
+                cursor.execute(insert_cmd,(today,code,name,open,close,high,low,vol,amount))
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.error(e)
 
 
 def daily(code):
