@@ -10,8 +10,8 @@ from config import token
 import tushare as ts
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 today_fmt = datetime.datetime.now().strftime('%Y%m%d')
-# today='2019-12-13'
-# today_fmt='20191213'
+# today='2020-02-06'
+# today_fmt='20200206'
 cons=ts.get_apis()
 logger=llogger('log/bond_daily.log')
 # ts.set_token(token)
@@ -23,7 +23,6 @@ def creat_table(day):
     tb_name = 'bond_{}'.format(day)
     create_cmd = 'create table if not exists `{tb_name}` (`date` varchar(20),`code` varchar(10) primary key,`name` varchar(16),`open` float ,' \
                  '`close` float,`high` float,`low` float,`vol` float,`amount` float) '.format(tb_name=tb_name)
-    # print(create_cmd)
     cursor = conn.cursor()
     try:
         cursor.execute(create_cmd)
@@ -57,6 +56,7 @@ def np_to_py_float(d):
 def loop_data():
 
     df = read_data_source(today)
+    # df = read_data_source('2020-02-07')
 
     if not creat_table(today):
         return
