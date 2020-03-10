@@ -39,6 +39,9 @@ price_df = pd.read_sql(today, con=engine_daily)
 logger = llogger('log/filter_bond.log')
 # 市值选择
 def market_share(zg_df):
+    if len(zg_df)==0:
+        return zg_df
+
     for i in zg_df.index:
         p = price_df[price_df['code'] == zg_df.loc[i]['code']]['trade'].values[0]
         ltgb = zg_df.loc[i]['outstanding']
