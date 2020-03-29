@@ -7,7 +7,7 @@
 import pymongo
 import config
 import tushare as ts
-from settings import get_engine,llogger
+from settings import get_engine,llogger,send_aliyun,QQ_MAIL
 import pandas as pd
 import datetime
 import numpy as np
@@ -23,22 +23,28 @@ YIJIALU = 10  # 溢价率
 ZZ_PRICE = 110  # 转债价格
 
 REMAIN_SHARE = 5  # 转股剩余比例
+logger = llogger('log/filter_bond.log')
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
-# today='2019-11-15'
+# today='2020-03-27'
 
-engine = get_engine('db_stock', 'local')
+try:
+    engine_daily = get_engine('db_daily', 'local')
+    engine = get_engine('db_stock', 'local')
+    jsl_df = pd.read_sql('tb_bond_jisilu', con=engine)
+    basic_df = pd.read_sql('tb_basic_info', con=engine, index_col='index')
+    price_df = pd.read_sql(today, con=engine_daily)
+    db=pymongo.MongoClient(config.mongodb_host,config.mongodb_port)
 
-jsl_df = pd.read_sql('tb_bond_jisilu', con=engine)
-basic_df = pd.read_sql('tb_basic_info', con=engine, index_col='index')
-engine_daily = get_engine('db_daily','local')
-db=pymongo.MongoClient(config.mongodb_host,config.mongodb_port)
+except Exception as e:
+    logger.error(e)
+    send_aliyun('读取数据库失败','',QQ_MAIL)
+    exit()
 
-price_df = pd.read_sql(today, con=engine_daily)
 
-logger = llogger('log/filter_bond.log')
+
 # 市值选择
-def market_share(zg_df):
+def market_share(zg_df,price_df):
     if len(zg_df)==0:
         return zg_df
 
@@ -159,14 +165,14 @@ def get_low_price(code,start):
 # 所有功能放在一起
 def main():
     global jsl_df
-    jsl_df = remain_share(jsl_df)
-    jsl_df = double_low(jsl_df)
-    zg_list = list(jsl_df['正股代码'].values)
+    jsl_df_ = remain_share(jsl_df)
+    jsl_df_ = double_low(jsl_df_)
+    zg_list = list(jsl_df_['正股代码'].values)
     zg_df = basic_df[basic_df['code'].isin(zg_list)]
-    zg_df = market_share(zg_df)
+    zg_df = market_share(zg_df,price_df)
     con = get_engine('double_low_bond', 'local')
     zg_df.to_sql('double_low_{}'.format(today), con=con, if_exists='replace')
-
+    # print(zg_df)
 
 if __name__ == '__main__':
     if ts.is_holiday(today):
