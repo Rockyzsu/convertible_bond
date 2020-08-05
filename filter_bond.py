@@ -7,7 +7,7 @@
 import pymongo
 import config
 import tushare as ts
-from settings import get_engine,llogger,send_aliyun,QQ_MAIL
+from settings import llogger,send_from_aliyun,QQ_MAIL,DBSelector,_json_data
 import pandas as pd
 import datetime
 import numpy as np
@@ -20,25 +20,27 @@ OUTSTANDING_MAX = 70  # 流通 x亿
 TOTAL_MAX = 500  # 总市值
 
 YIJIALU = 10  # 溢价率
-ZZ_PRICE = 110  # 转债价格
+ZZ_PRICE = 120  # 转债价格
 
 REMAIN_SHARE = 5  # 转股剩余比例
 logger = llogger('log/filter_bond.log')
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 # today='2020-03-27'
-
+DB = DBSelector()
+host=_json_data['mongo']['qq']['host']
+port=_json_data['mongo']['qq']['port']
 try:
-    engine_daily = get_engine('db_daily', 'local')
-    engine = get_engine('db_stock', 'local')
+    engine_daily = DB.get_engine('db_daily', 'qq')
+    engine = DB.get_engine('db_stock', 'qq')
     jsl_df = pd.read_sql('tb_bond_jisilu', con=engine)
     basic_df = pd.read_sql('tb_basic_info', con=engine, index_col='index')
     price_df = pd.read_sql(today, con=engine_daily)
-    db=pymongo.MongoClient(config.mongodb_host,config.mongodb_port)
+    db=pymongo.MongoClient(host=host,port=port)
 
 except Exception as e:
     logger.error(e)
-    send_aliyun('读取数据库失败','',QQ_MAIL)
+    send_from_aliyun('读取数据库失败','')
     exit()
 
 
@@ -48,16 +50,16 @@ def market_share(zg_df,price_df):
     if len(zg_df)==0:
         return zg_df
 
-    for i in zg_df.index:
-        p = price_df[price_df['code'] == zg_df.loc[i]['code']]['trade'].values[0]
-        ltgb = zg_df.loc[i]['outstanding']
-        total_gb = zg_df.loc[i]['totals']
-        lt = round(p * ltgb, 1)  # 流通市值
-        zg_df.loc[i, 'outstanding_shizhi'] = lt
-        zsz = round(p * total_gb, 1)  # 总市值
-        zg_df.loc[i, 'totals_shizhi'] = zsz
+    for index in zg_df.index:
+        price = price_df[price_df['code'] == zg_df.loc[index]['code']]['trade'].values[0]
+        ltgb = zg_df.loc[index]['outstanding']
+        total_gb = zg_df.loc[index]['totals']
+        lt = round(price * ltgb, 1)  # 流通市值
+        zg_df.loc[index, 'outstanding_shizhi'] = lt
+        zsz = round(price * total_gb, 1)  # 总市值
+        zg_df.loc[index, 'totals_shizhi'] = zsz
 
-    zg_df = zg_df[(zg_df['outstanding_shizhi'] < OUTSTANDING_MAX) & (zg_df['totals_shizhi'] < TOTAL_MAX)]
+    zg_df = zg_df[(zg_df['outstanding_shizhi'] <= OUTSTANDING_MAX) & (zg_df['totals_shizhi'] <= TOTAL_MAX)]
     zg_df = zg_df.sort_values(by='outstanding_shizhi')
     zg_df.reset_index(inplace=True, drop=True)
     # print(zg_df[['code','name','outstanding_shizhi','totals_shizhi']])
@@ -67,7 +69,7 @@ def market_share(zg_df,price_df):
 
 # 双低
 def double_low(jsl_df):
-    jsl_df = jsl_df[(jsl_df['溢价率'] < YIJIALU) & (jsl_df['可转债价格'] < ZZ_PRICE)]
+    jsl_df = jsl_df[(jsl_df['溢价率'] <= YIJIALU) & (jsl_df['可转债价格'] <= ZZ_PRICE)]
     # print(jsl_df)
     return jsl_df
 
@@ -165,16 +167,15 @@ def get_low_price(code,start):
 # 所有功能放在一起
 def main():
     global jsl_df
+
     jsl_df_ = remain_share(jsl_df)
     jsl_df_ = double_low(jsl_df_)
     zg_list = list(jsl_df_['正股代码'].values)
     zg_df = basic_df[basic_df['code'].isin(zg_list)]
     zg_df = market_share(zg_df,price_df)
-    con = get_engine('double_low_bond', 'local')
+    con = DB.get_engine('double_low_bond', 'qq')
     zg_df.to_sql('double_low_{}'.format(today), con=con, if_exists='replace')
-    # print(zg_df)
 
 if __name__ == '__main__':
-    if ts.is_holiday(today):
-        exit(0)
-    main()
+    if not ts.is_holiday(today):
+        main()

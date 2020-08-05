@@ -6,7 +6,7 @@ Contact: weigesysu@qq.com
 
 import datetime
 import tushare as ts
-from settings import get_engine, get_mysql_conn,llogger,send_aliyun,QQ_MAIL
+from settings import DBSelector,llogger,send_from_aliyun
 import pandas as pd
 import numpy as np
 
@@ -22,6 +22,7 @@ import numpy as np
 # db = pymongo.MongoClient('10.18.6.46', port=27001)
 
 logger = llogger('log/'+'bond_statistic.log')
+DB = DBSelector()
 # 获取次新股的可转债数据
 def get_zhenggu():
     obj = Filter_Stock()
@@ -94,7 +95,7 @@ def save_list_mongo(source_list):
     last_str = '\n'.join(last_str)
     content = '跌幅前10:::\n' + last_str + '\n涨幅前10:::\n' + top_str
     try:
-        send_aliyun(title, content,QQ_MAIL)
+        send_from_aliyun(title, content)
     except Exception as e:
         logger.error(e)
 
@@ -109,7 +110,7 @@ def save_list_mongo(source_list):
 
 # 导出一些基本数据，可转债的
 def convert_name_db():
-    conn = get_mysql_conn('db_stock', 'local')
+    conn = DB.get_mysql_conn('db_stock', 'qq')
     cursor = conn.cursor()
     query_cmd = '''
     select * from tb_bond_jisilu
@@ -147,7 +148,7 @@ def find_lower_bond():
     # 和均值的比较因子，正常为1
 
     percent = 1
-    con = get_mysql_conn('db_stock','local')
+    con = DB.get_mysql_conn('db_stock','qq')
     cursor = con.cursor()
     query_avg_sql = '''
     SELECT `评级`,count(*) as n,round(AVG(`最小值`),2) as `均值` FROM `tb_bond_kind_info` GROUP BY `评级`
@@ -180,7 +181,7 @@ def find_zz_zg_diff():
         logger.info('假期')
         return
 
-    con=get_mysql_conn('db_stock','local')
+    con=DB.get_mysql_conn('db_stock','qq')
     cursor=con.cursor()
     query_cmd = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
     minus_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`<0'
@@ -249,7 +250,7 @@ def find_zz_zg_diff():
     content=f'转债上涨比例：{raise_ratio}\n转债跌>正股数：{num}\n可转债涨幅>=0----{plug_count}\n可转债涨幅<0----{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}\n涨幅波动的方差：{ripple_ratio}'
 
     try:
-        send_aliyun(title,content,QQ_MAIL)
+        send_from_aliyun(title,content)
     except Exception as e:
         logger.error(e)
     else:
@@ -272,7 +273,7 @@ def find_zz_zg_diff():
 # 查看历史数据
 def find_zz_zg_diff_history():
 
-    con = get_mysql_conn('db_jisilu', 'local')
+    con = DB.get_mysql_conn('db_jisilu', 'qq')
     cursor = con.cursor()
     current = datetime.date.today()
     days=60
@@ -299,7 +300,7 @@ def find_zz_zg_diff_history():
     # print(sorted(num_list,key=lambda x:x[1],reverse=True))
     con.close()
 
-    con2 = get_mysql_conn('db_stock','local')
+    con2 = DB.get_mysql_conn('db_stock','qq')
     cur=con2.cursor()
     insert_sql = 'insert into `tb_zz_more_drop_zg` (date,number) values (%s,%s)'
     try:
@@ -313,13 +314,13 @@ def find_zz_zg_diff_history():
 
 # 计算历史平均溢价率
 def avg_yjl_history():
-    con=get_mysql_conn('db_jisilu','local')
-    con2=get_mysql_conn('db_stock','local')
+    jsl_con=DB.get_mysql_conn('db_jisilu','qq')
+    stock_con=DB.get_mysql_conn('db_stock','qq')
 
-    cursor=con.cursor()
-    cursor2=con2.cursor()
+    jsl_cursor=jsl_con.cursor()
+    stock_cursor=stock_con.cursor()
 
-    start = datetime.datetime(2019,2,25)
+    start = datetime.datetime(2020,1,1)
     update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
     while 1:
         if start>=datetime.datetime.now():
@@ -327,13 +328,13 @@ def avg_yjl_history():
         date_str = start.strftime('%Y-%m-%d')
         try:
             search_sql = 'select `溢价率` from `tb_jsl_{}`'.format(date_str)
-            cursor.execute(search_sql)
+            jsl_cursor.execute(search_sql)
 
         except Exception as e:
             logger.error(e)
 
         else:
-            content = cursor.fetchall()
+            content = jsl_cursor.fetchall()
             data=[]
             for item in content:
                 data.append(item[0])
@@ -348,12 +349,12 @@ def avg_yjl_history():
             # print(t_value)
 
             try:
-                cursor2.execute(update_sql,t_value)
-                con2.commit()
+                stock_cursor.execute(update_sql,t_value)
+                stock_con.commit()
 
             except Exception as e:
                 logger.error(e)
-                con2.rollback()
+                stock_con.rollback()
             else:
                 logger.info('update')
 

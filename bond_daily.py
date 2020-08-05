@@ -3,7 +3,7 @@
 # @Time : 2019/7/1 16:50
 # @File : bond_daily.py
 # 收集可转债的市场全景图
-from settings import get_engine,sendmail,llogger,get_mysql_conn
+from settings import DBSelector,send_from_aliyun,llogger
 import pandas as pd
 import datetime
 from config import token
@@ -15,11 +15,16 @@ today_fmt = datetime.datetime.now().strftime('%Y%m%d')
 cons=ts.get_apis()
 logger=llogger('log/bond_daily.log')
 # ts.set_token(token)
-
+DB = DBSelector()
 # pro = ts.pro_api()
-conn=get_mysql_conn('db_bond_daily','local')
+conn=DB.get_mysql_conn('db_bond_daily','qq')
 
 def creat_table(day):
+    '''
+    建表
+    :param day:
+    :return:
+    '''
     tb_name = 'bond_{}'.format(day)
     create_cmd = 'create table if not exists `{tb_name}` (`date` varchar(20),`code` varchar(10) primary key,`name` varchar(16),`open` float ,' \
                  '`close` float,`high` float,`low` float,`vol` float,`amount` float) '.format(tb_name=tb_name)
@@ -34,13 +39,14 @@ def creat_table(day):
         return True
 
 def read_data_source(today):
-    engine = get_engine('db_jisilu','local')
+    engine = DB.get_engine('db_jisilu','qq')
+
     try:
         df = pd.read_sql('tb_jsl_{}'.format(today),con=engine)
     except Exception as e:
         logger.error(e)
 
-        sendmail('代码{}出错\n读取表tb_jsl_{}失败'.format('bond_daily',today),'{}'.format(today))
+        send_from_aliyun('代码{}出错\n读取表tb_jsl_{}失败'.format('bond_daily',today),'{}'.format(today))
         return None
     else:
         return df
@@ -57,7 +63,6 @@ def loop_data():
 
     df = read_data_source(today)
     # df = read_data_source('2020-02-07')
-
     if not creat_table(today):
         return
 
@@ -99,10 +104,11 @@ def loop_data():
             '''.format(today)
             try:
                 cursor.execute(insert_cmd,(today,code,name,open,close,high,low,vol,amount))
-                conn.commit()
             except Exception as e:
                 conn.rollback()
                 logger.error(e)
+            else:
+                conn.commit()
 
 
 def daily(code):
@@ -131,6 +137,7 @@ def daily(code):
 
 
 if __name__=='__main__':
+
     if ts.is_holiday(today):
         logger.info('假期')
         ts.close_apis(cons)

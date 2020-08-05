@@ -1,0 +1,46 @@
+{
+  "mysql": {
+    "local": {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "root",
+      "password": "123456z"
+    },
+    "qq": {
+      "host": "129.204.134.181",
+      "port": 5306,
+      "user": "root",
+      "password": "byb202007"
+    }
+  },
+  "redis": {
+    "qq": {
+      "host": "129.204.134.181",
+      "port": 6379,
+      "password": "byb202007"
+    }
+  },
+  "mail": {
+    "qq": {
+      "user": "weigesysu@qq.com"
+    },
+    "alibaba": {
+      "user": "datasender@30daydo.com",
+      "password": "Jsl12345"
+    }
+  },
+    "mongo": {
+    "qq": {
+      "host": "129.204.134.181",
+      "port": 27018,
+      "user": "admin",
+      "password": "byb202007"
+    },
+    "local": {
+      "host": "127.0.0.1",
+      "port": 27017,
+      "user": null,
+      "password": null
+    }
+  }
+}

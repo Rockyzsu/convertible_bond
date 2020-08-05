@@ -7,10 +7,11 @@ import datetime
 import re
 import pandas as pd
 import requests
-from settings import get_mysql_conn,llogger
+from settings import DBSelector,llogger
 import tushare as ts
 logger = llogger('log/'+'cb_index.log')
 
+DB = DBSelector()
 # 获取当天的记录
 def get_today_index():
     url='https://www.jisilu.cn/data/cbnew/cb_index_quote/'
@@ -32,7 +33,7 @@ def get_today_index():
     increase_val = data_.get('cur_increase_val')  # 涨跌额
     increase_rt = data_.get('cur_increase_rt')  # 涨跌幅
 
-    con = get_mysql_conn('db_stock', 'local')
+    con = DB.get_mysql_conn('db_stock', 'qq')
     cursor = con.cursor()
     current=datetime.datetime.now().strftime('%Y-%m-%d')
     update_data_sql = '''
@@ -51,6 +52,7 @@ def get_today_index():
     else:
         con.commit()
         logger.info('爬取成功并入库')
+        con.close()
 
 # 获取历史记录
 def history_data():
@@ -114,8 +116,9 @@ def history_data():
 if __name__ == '__main__':
     current = datetime.datetime.now().strftime('%Y-%m-%d')
     logger.info('Start')
+    check=False
     con=ts.get_apis()
-    if ts.is_holiday(current):
+    if check and ts.is_holiday(current):
         logger.info('Holiday')
         ts.close_apis(con)
         exit()

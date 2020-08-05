@@ -9,7 +9,7 @@ import time
 import pymongo
 import tushare as ts
 import pandas as pd
-from settings import get_engine,send_aliyun,QQ_MAIL,llogger
+from settings import send_aliyun,llogger,DBSelector,_json_data
 import config
 
 # 大单定义 手数, 需要在大单数据获取完成后
@@ -20,32 +20,43 @@ DELTA_DAY = 35
 logger=llogger('log/big_deal.log')
 current_day = datetime.date.today().strftime('%Y-%m-%d')
 # current_day='2019-12-11'
+
 class BigDeal(object):
 
     def __init__(self):
-
-        # self.df = self.get_tick()
         today = datetime.datetime.now().strftime('%Y-%m-%d')
         # today = '2019-10-18'
 
         if ts.is_holiday(today):
             logger.info('{}假期 >>>>>'.format(today))
             exit()
-
-        self.db_stock_engine = get_engine('db_stock', 'local')
+        self.DB = DBSelector()
+        self.db_stock_engine = self.DB.get_engine('db_stock', 'qq')
         self.jisilu_df = self.get_code()
         self.code_name_dict=dict(zip(list(self.jisilu_df['可转债代码'].values),list(self.jisilu_df['可转债名称'].values)))
-        self.db = pymongo.MongoClient(config.mongodb_host, config.mongodb_port)
-
+        basic_info = _json_data['mongo']['qq']
+        host = basic_info['host']
+        port = basic_info['port']
+        user = basic_info['user']
+        password = basic_info['password']
+        # connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
+        connect_uri = f'mongodb://{host}:{port}'
+        self.db = pymongo.MongoClient(connect_uri)
 
     def get_ticks(self, code, date):
         df = ts.get_tick_data(code, date=date, src='tt')
-        # today = datetime.date.today().strftime('%Y-%m-%d')
         df['time'] = df['time'].map(lambda x: date + ' ' + x)
         return df
 
-    # 从mongo获取数据 默认分钟 1000张
     def get_volume_distribition(self,code,date,types='min',big_deal=BIG_DEAL):
+        '''
+        # 从mongo获取数据 默认分钟 1000张
+        :param code:
+        :param date:
+        :param types:
+        :param big_deal:
+        :return:
+        '''
         # code='110030'
         # date='2019-04-02'
 
@@ -129,10 +140,13 @@ class BigDeal(object):
         df = pd.read_sql('tb_bond_jisilu', con=self.db_stock_engine)
         return df
 
-    # 获取大单数据
     def loop_date(self,today=True):
-
+        '''
+        # 获取大单数据
         # 获取当天数据，18点之后
+        :param today:
+        :return:
+        '''
         if today:
 
             if ts.is_holiday(current_day):
@@ -142,7 +156,6 @@ class BigDeal(object):
                 self.loop_code(current_day)
 
         # 获取一周的数据看看
-
         else:
             delta = DELTA_DAY
             for i in range(1, delta + 1):
@@ -193,11 +206,7 @@ class BigDeal(object):
         else:
             logger.info('发送成功')
 
-
-def main():
-    obj = BigDeal()
-    obj.loop_date(False) # 获取历史大单数据
-
 if __name__ == '__main__':
+    obj = BigDeal()
+    obj.loop_date(today=True) # 获取历史大单数据
 
-    main()

@@ -17,7 +17,6 @@ if __name__=='__main__':
         exit()
 
     else:
-        # TODO
         obj = BigDeal()
         obj.loop_date()
 

@@ -14,6 +14,5 @@ if __name__=='__main__':
         exit()
 
     else:
-        # TODO
         main()
         ts.close_apis(cons)
