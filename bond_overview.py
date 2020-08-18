@@ -86,7 +86,7 @@ class CBSpider(object):
 
         return data, date
 
-    def process(self, data, history=True):
+    def process(self, data, history=False):
         '''
         数据存储        
         '''
