@@ -16,3 +16,4 @@ config.py
 conf.py
 email_list.py
 settings.py
+config.json
