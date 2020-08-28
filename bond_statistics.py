@@ -175,6 +175,7 @@ def find_lower_bond():
 
 # 统计每天转债跌得比正股多的
 def find_zz_zg_diff():
+
     current=datetime.date.today().strftime('%Y-%m-%d')
     # current ='2019-10-18'
     if ts.is_holiday(current):
@@ -183,13 +184,13 @@ def find_zz_zg_diff():
 
     con=DB.get_mysql_conn('db_stock','qq')
     cursor=con.cursor()
-    query_cmd = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
+    zz_than_zg = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
     minus_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`<0'
     plug_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`>=0'
 
-    cursor.execute(query_cmd)
-    get_count = cursor.fetchone()
-    num=get_count[0]
+    cursor.execute(zz_than_zg)
+    zz_than_zg_count = cursor.fetchone()[0]
+    # zz_than_zg_count_=zz_than_zg_count[0]
 
     cursor.execute(minus_count_cmd)
     minus_count=cursor.fetchone()[0]
@@ -227,15 +228,20 @@ def find_zz_zg_diff():
         else:
             logger.info('update')
 
-    cal_query = 'select `可转债涨幅` from tb_bond_jisilu'
+    cal_query = 'select `可转债涨幅`,`可转债名称` from tb_bond_jisilu'
 
     cursor.execute(cal_query)
     cal_result = cursor.fetchall()
-    cal_result_list=[]
+    # cal_result_list=[]
+    result_dict = {}
     for i in cal_result:
-        cal_result_list.append(i[0])
-
-    cal_result_np=np.array(cal_result_list)
+        result_dict[i[1]]=i[0]
+        # cal_result_list.append(i[0])
+    sort_result = list(sorted(result_dict.items(),key=lambda x:x[1],reverse=False))
+    fall_name = sort_result[0][0]
+    raise_name = sort_result[-1][0]
+    result_list = list(result_dict.values())
+    cal_result_np=np.array(result_list)
     large_than_zero = len(cal_result_np[cal_result_np>=0])
     # small_than_zero = len(cal_result_np[cal_result_np<0])
     total_len = len(cal_result_np)
@@ -246,11 +252,19 @@ def find_zz_zg_diff():
     median=round(np.median(cal_result_np),2)
 
     ripple_ratio = round(cal_result_np.var(),2)
-    title='{}转债跌大于正股数：{}'.format(current,num)
-    content=f'转债上涨比例：{raise_ratio}\n转债跌>正股数：{num}\n可转债涨幅>=0----{plug_count}\n可转债涨幅<0----{minus_count}\n涨幅最大值：{max_v}\n涨幅最小值：{min_v}\n涨幅均值：{mean}\n涨幅中位数：{median}\n涨幅波动的方差：{ripple_ratio}'
+    title='{}转债跌大于正股数：{}'.format(current,zz_than_zg_count)
+    content=f'<p>转债上涨比例：<font color="red">{raise_ratio}</font></p>' \
+            f'<p>转债跌>正股数: <font color="red">{zz_than_zg_count}</font></p>' \
+            f'可转债涨幅>=0： <font color="red">{plug_count}</font></p>' \
+            f'可转债涨幅<0： <font color="red">{minus_count}</font></p>' \
+            f'涨幅最大值：<font color="red">{max_v}</font> 属于<font color="red">{raise_name}</font></p>' \
+            f'涨幅最小值：<font color="red">{min_v}</font> 属于<font color="red">{fall_name}</font></p>' \
+            f'涨幅均值：<font color="red">{mean}</font></p>' \
+            f'涨幅中位数：<font color="red">{median}</font></p>' \
+            f'涨幅波动的方差：<font color="red">{ripple_ratio}</font></p>'
 
     try:
-        send_from_aliyun(title,content)
+        send_from_aliyun(title,content,types='html')
     except Exception as e:
         logger.error(e)
     else:
@@ -260,7 +274,7 @@ def find_zz_zg_diff():
     # 写入数据库
     insert_sql = 'insert into tb_bond_analysis (date,转债跌大于正股数量,可转债涨幅大于0,可转债涨幅小于0) values (%s,%s,%s,%s)'
     try:
-        cursor.execute(insert_sql,(current,num,plug_count,minus_count))
+        cursor.execute(insert_sql,(current,zz_than_zg_count,plug_count,minus_count))
         con.commit()
     except Exception as e:
         logger.error(e)

@@ -13,6 +13,7 @@ logger = llogger('log/task_jsler_double_low.log')
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 DB = DBSelector()
 
+
 def map_rate(x):
     map_dict = {
         'A+': 1,
@@ -28,18 +29,20 @@ def map_rate(x):
 def cb_info():
     con = DB.get_engine('db_stock', 'qq')
     df = pd.read_sql('tb_bond_jisilu', con=con)
-    df['grade']=df['评级'].map(lambda x:map_rate(x))
+    df['grade'] = df['评级'].map(lambda x: map_rate(x))
 
-    df['可转债综合价格'] = df['可转债价格'] + df['溢价率']*df['grade']
+    df['可转债综合价格'] = df['可转债价格'] + df['溢价率'] * df['grade']
     df = df.sort_values(by='可转债综合价格')
-    # df = df[df['强赎标志'] != 'Y']
-    df1 = df[['可转债代码', '可转债名称', '可转债综合价格', '可转债价格', '溢价率','评级']].head(20)
+    df = df[df['强赎日期'].isnull()]
+    df1 = df[['可转债代码', '可转债名称', '可转债综合价格', '可转债价格', '溢价率', '评级']].head(20)
     df1 = df1.reset_index(drop=True)
-    send_content = df1.to_html()
-    # send_content=send_content+'\n\n默认每周一开盘前发送一次，如果有其他需求请回复。\n'
-    # send_content = send_content
+    df2=df1
+    df2['可转债名称']=df2['可转债名称'].map(lambda x:x.replace('转债',''))
+    send_content = df2.to_html(index=False, border=1, justify='center')
+    send_content=send_content.replace('class', 'cellspacing=\"0\" class')
+
     title = '{} 可转债综合价格前20名'.format(datetime.datetime.now().strftime('%Y-%m-%d'))
-    conn2 = DB.get_engine('double_low_full','qq')
+    conn2 = DB.get_engine('double_low_full', 'qq')
     df1.to_sql(f'double_low_{today}', con=conn2, if_exists='replace')
 
     try:
@@ -49,6 +52,11 @@ def cb_info():
         logger.error(e)
     else:
         logger.info('发送成功！')
+
+
+def formator(df):
+    for row, value in df.iterrows():
+        pass
 
 
 if __name__ == '__main__':
@@ -62,4 +70,3 @@ if __name__ == '__main__':
     else:
         cb_info()
         ts.close_apis(cons)
-
