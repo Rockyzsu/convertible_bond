@@ -69,7 +69,7 @@ class CBSpider(object):
         except:
             return None
         else:
-            return text
+            return r.text
 
     def parse(self, content):
         '''
@@ -90,7 +90,7 @@ class CBSpider(object):
         '''
         数据存储        
         '''
-        print(data)
+        # print(data)
         data_, date_ = data[0], data[1]
         data = eval(data_)
         date = eval(date_)
@@ -140,7 +140,7 @@ class CBSpider(object):
                 # insert_sql = f'''insert into `bond_overview` (`id`,`date`, `price`,`volume`,`amount`,`count`,`avg_price`,`mid_price`,`avg_premium_rt`,  `avg_ytm_rt`,  `increase_val`,  `increase_rt`,  `turnover_rt`,  `price_90`,  `price_90_100`,  `price_100_110`,  `price_110_120`,  `price_120_130`,  `price_130`,  `idx_price`,  `idx_increase_rt`）value ({join_str})'''
                 insert_sql = f'''insert into `bond_overview` values ({join_str})'''
                 
-                print(insert_sql)
+                # print(insert_sql)
                 insert_data.insert(0, idx+1)
                 cursor.execute(insert_sql, insert_data)
                 conn.commit()
