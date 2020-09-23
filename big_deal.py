@@ -40,7 +40,9 @@ class BigDeal(object):
         user = basic_info['user']
         password = basic_info['password']
         # connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
-        connect_uri = f'mongodb://{host}:{port}'
+        # connect_uri = f'mongodb://{host}:{port}'
+
+        connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
         self.db = pymongo.MongoClient(connect_uri)
 
     def get_ticks(self, code, date):

@@ -10,7 +10,7 @@ import parsel
 import re
 import datetime
 import pandas as pd
-from settings import DBSelector
+from settings import DBSelector,_json_data
 from sqlalchemy.types import DATE
 '''
 可转债综合概览
@@ -36,7 +36,13 @@ class CBSpider(object):
 
         if db and db == 'mongo':
             # 数据库选择
-            self.db = pymongo.MongoClient()
+            INFO = _json_data['mongo']['arm']
+            host = INFO['host']
+            port = INFO['port']
+            user = INFO['user']
+            password = INFO['password']
+            connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
+            self.db = pymongo.MongoClient(connect_uri)
             self.doc = db['']['']
 
     def get(self, _josn=False, binary=False):

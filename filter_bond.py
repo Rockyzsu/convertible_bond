@@ -28,15 +28,21 @@ logger = llogger('log/filter_bond.log')
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 # today='2020-03-27'
 DB = DBSelector()
-host=_json_data['mongo']['qq']['host']
-port=_json_data['mongo']['qq']['port']
+# host=_json_data['mongo']['qq']['host']
+# port=_json_data['mongo']['qq']['port']
 try:
     engine_daily = DB.get_engine('db_daily', 'qq')
     engine = DB.get_engine('db_stock', 'qq')
     jsl_df = pd.read_sql('tb_bond_jisilu', con=engine)
     basic_df = pd.read_sql('tb_basic_info', con=engine, index_col='index')
     price_df = pd.read_sql(today, con=engine_daily)
-    db=pymongo.MongoClient(host=host,port=port)
+    INFO = _json_data['mongo']['arm']
+    host = INFO['host']
+    port = INFO['port']
+    user = INFO['user']
+    password = INFO['password']
+    connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
+    db=pymongo.MongoClient(connect_uri)
 
 except Exception as e:
     logger.error(e)
