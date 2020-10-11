@@ -153,7 +153,6 @@ def weekly_drop_rank(current=True):
 
 def get_low_price(code,start):
     df = ts.get_k_data(code=code,start=start)
-    # print(df)
     pre_closed = df.iloc[0]['close']
     last_closed = df.iloc[-1]['close']
     m_percent = round((last_closed-pre_closed)/pre_closed*100,2)
