@@ -6,7 +6,7 @@ Contact: weigesysu@qq.com
 
 import datetime
 import tushare as ts
-from settings import DBSelector,llogger,send_from_aliyun
+from settings import DBSelector, llogger, send_from_aliyun
 import pandas as pd
 import numpy as np
 
@@ -21,8 +21,10 @@ import numpy as np
 # kzz_name_list = df['可转债名称'].values
 # db = pymongo.MongoClient('10.18.6.46', port=27001)
 
-logger = llogger('log/'+'bond_statistic.log')
+logger = llogger('log/' + 'bond_statistic.log')
 DB = DBSelector()
+
+
 # 获取次新股的可转债数据
 def get_zhenggu():
     obj = Filter_Stock()
@@ -126,38 +128,38 @@ def convert_name_db():
         zg_code = item[4]
         grade = item[17]
 
-
         get_area = '''
         select area from tb_basic_info where code = %s
         '''
 
-        cursor.execute(get_area,zg_code)
-        result= cursor.fetchone()[0]
-
+        cursor.execute(get_area, zg_code)
+        result = cursor.fetchone()[0]
 
         insert_cmd = '''
         insert into tb_bond_kind_info (可转债名称,可转债代码,正股名称,正股代码,评级,地区,更新时间) values(%s,%s,%s,%s,%s,%s,%s)
         '''
 
-        cursor.execute(insert_cmd,(name,code,zg_name,zg_code,grade,result,datetime.datetime.now().strftime('%Y-%m-%d')))
+        cursor.execute(insert_cmd,
+                       (name, code, zg_name, zg_code, grade, result, datetime.datetime.now().strftime('%Y-%m-%d')))
 
     conn.commit()
+
 
 # 根据评级找出一些低于均值的个债
 def find_lower_bond():
     # 和均值的比较因子，正常为1
 
     percent = 1
-    con = DB.get_mysql_conn('db_stock','qq')
+    con = DB.get_mysql_conn('db_stock', 'qq')
     cursor = con.cursor()
     query_avg_sql = '''
     SELECT `评级`,count(*) as n,round(AVG(`最小值`),2) as `均值` FROM `tb_bond_kind_info` GROUP BY `评级`
     '''
     cursor.execute(query_avg_sql)
     ret = cursor.fetchall()
-    d= {}
+    d = {}
     for item in ret:
-        d[item[0]]=item[2]
+        d[item[0]] = item[2]
 
     print(d)
     query_all_bond_sql = '''
@@ -167,135 +169,27 @@ def find_lower_bond():
     total_bond_ret = cursor.fetchall()
     for item in total_bond_ret:
         if item[2] <= percent * d.get(item[1]):
-            ration = round((item[2]-d.get(item[1]))/d.get(item[1])*100,2)
+            ration = round((item[2] - d.get(item[1])) / d.get(item[1]) * 100, 2)
 
             print(f'{item[3]}:评级{item[1]},当前价格：{item[2]},低于比例{ration}')
 
     print('done')
 
-# 统计每天转债跌得比正股多的
-def find_zz_zg_diff():
 
-    current=datetime.date.today().strftime('%Y-%m-%d')
-    # current ='2019-10-18'
-    if ts.is_holiday(current):
-        logger.info('假期')
-        return
-
-    con=DB.get_mysql_conn('db_stock','qq')
-    cursor=con.cursor()
-    zz_than_zg = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
-    minus_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`<0'
-    plug_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`>=0'
-
-    cursor.execute(zz_than_zg)
-    zz_than_zg_count = cursor.fetchone()[0]
-    # zz_than_zg_count_=zz_than_zg_count[0]
-
-    cursor.execute(minus_count_cmd)
-    minus_count=cursor.fetchone()[0]
-
-    cursor.execute(plug_count_cmd)
-    plug_count=cursor.fetchone()[0]
-
-    try:
-        search_sql = 'select `溢价率` from `tb_bond_jisilu`'
-        cursor.execute(search_sql)
-
-    except Exception as e:
-        logger.error(e)
-
-    else:
-        content = cursor.fetchall()
-        data = []
-        for item in content:
-            data.append(item[0])
-        np_data = np.array(data)
-        max_value = np.round(np_data.max(), 2)
-        min_value = np.round(np_data.min(), 2)
-        mean = np.round(np_data.mean(), 2)
-        median = np.round(np.median(np_data), 2)
-        count = len(np_data)
-        t_value = (current, float(mean), float(max_value), float(min_value), float(median), count)
-        update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
-        try:
-            cursor.execute(update_sql, t_value)
-            con.commit()
-
-        except Exception as e:
-            logger.error(e)
-            con.rollback()
-        else:
-            logger.info('update')
-
-    cal_query = 'select `可转债涨幅`,`可转债名称` from tb_bond_jisilu'
-
-    cursor.execute(cal_query)
-    cal_result = cursor.fetchall()
-    # cal_result_list=[]
-    result_dict = {}
-    for i in cal_result:
-        result_dict[i[1]]=i[0]
-        # cal_result_list.append(i[0])
-    sort_result = list(sorted(result_dict.items(),key=lambda x:x[1],reverse=False))
-    fall_name = sort_result[0][0]
-    raise_name = sort_result[-1][0]
-    result_list = list(result_dict.values())
-    cal_result_np=np.array(result_list)
-    large_than_zero = len(cal_result_np[cal_result_np>=0])
-    # small_than_zero = len(cal_result_np[cal_result_np<0])
-    total_len = len(cal_result_np)
-    raise_ratio = round(large_than_zero/total_len*100,2)
-    max_v=cal_result_np.max()
-    min_v=cal_result_np.min()
-    mean=round(cal_result_np.mean(),2)
-    median=round(np.median(cal_result_np),2)
-
-    ripple_ratio = round(cal_result_np.var(),2)
-    title='{}转债跌大于正股数：{}'.format(current,zz_than_zg_count)
-    content=f'<p>转债上涨比例：<font color="red">{raise_ratio}</font></p>' \
-            f'<p>转债跌>正股数: <font color="red">{zz_than_zg_count}</font></p>' \
-            f'可转债涨幅>=0： <font color="red">{plug_count}</font></p>' \
-            f'可转债涨幅<0： <font color="red">{minus_count}</font></p>' \
-            f'涨幅最大值：<font color="red">{max_v}</font> 属于<font color="red">{raise_name}</font></p>' \
-            f'涨幅最小值：<font color="red">{min_v}</font> 属于<font color="red">{fall_name}</font></p>' \
-            f'涨幅均值：<font color="red">{mean}</font></p>' \
-            f'涨幅中位数：<font color="red">{median}</font></p>' \
-            f'涨幅波动的方差：<font color="red">{ripple_ratio}</font></p>'
-
-    try:
-        send_from_aliyun(title,content,types='html')
-    except Exception as e:
-        logger.error(e)
-    else:
-        logger.info('发送成功')
-        logger.info(content)
-
-    # 写入数据库
-    insert_sql = 'insert into tb_bond_analysis (date,转债跌大于正股数量,可转债涨幅大于0,可转债涨幅小于0) values (%s,%s,%s,%s)'
-    try:
-        cursor.execute(insert_sql,(current,zz_than_zg_count,plug_count,minus_count))
-        con.commit()
-    except Exception as e:
-        logger.error(e)
-        con.rollback()
-    else:
-        logger.info('入库成功')
 
 
 
 # 查看历史数据
 def find_zz_zg_diff_history():
-
     con = DB.get_mysql_conn('db_jisilu', 'qq')
     cursor = con.cursor()
     current = datetime.date.today()
-    days=60
-    tb_name ='tb_jsl_{}'
-    num_list =[]
+    days = 60
+    tb_name = 'tb_jsl_{}'
+    num_list = []
     for i in range(days):
 
-        start = (current+datetime.timedelta(days=-1*i)).strftime("%Y-%m-%d")
+        start = (current + datetime.timedelta(days=-1 * i)).strftime("%Y-%m-%d")
         name = tb_name.format(start)
 
         query_cmd = 'select count(*) from `{}` WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'.format(name)
@@ -309,16 +203,16 @@ def find_zz_zg_diff_history():
         else:
             get_count = cursor.fetchone()
             num = get_count[0]
-            num_list.append((start,num))
+            num_list.append((start, num))
     # print(num_list)
     # print(sorted(num_list,key=lambda x:x[1],reverse=True))
     con.close()
 
-    con2 = DB.get_mysql_conn('db_stock','qq')
-    cur=con2.cursor()
+    con2 = DB.get_mysql_conn('db_stock', 'qq')
+    cur = con2.cursor()
     insert_sql = 'insert into `tb_zz_more_drop_zg` (date,number) values (%s,%s)'
     try:
-        cur.executemany(insert_sql,(num_list))
+        cur.executemany(insert_sql, (num_list))
         con2.commit()
     except Exception as e:
         logger.error(e)
@@ -326,18 +220,19 @@ def find_zz_zg_diff_history():
     else:
         logger.info('入库成功')
 
+
 # 计算历史平均溢价率
 def avg_yjl_history():
-    jsl_con=DB.get_mysql_conn('db_jisilu','qq')
-    stock_con=DB.get_mysql_conn('db_stock','qq')
+    jsl_con = DB.get_mysql_conn('db_jisilu', 'qq')
+    stock_con = DB.get_mysql_conn('db_stock', 'qq')
 
-    jsl_cursor=jsl_con.cursor()
-    stock_cursor=stock_con.cursor()
+    jsl_cursor = jsl_con.cursor()
+    stock_cursor = stock_con.cursor()
 
-    start = datetime.datetime(2020,1,1)
+    start = datetime.datetime(2020, 1, 1)
     update_sql = 'insert into tb_bond_avg_yjl (Date,溢价率均值,溢价率最大值,溢价率最小值,溢价率中位数,转债数目) values (%s,%s,%s,%s,%s,%s)'
     while 1:
-        if start>=datetime.datetime.now():
+        if start >= datetime.datetime.now():
             break
         date_str = start.strftime('%Y-%m-%d')
         try:
@@ -349,21 +244,21 @@ def avg_yjl_history():
 
         else:
             content = jsl_cursor.fetchall()
-            data=[]
+            data = []
             for item in content:
                 data.append(item[0])
 
             np_data = np.array(data)
-            max_value= np.round(np_data.max(),2)
-            min_value= np.round(np_data.min(),2)
-            mean = np.round(np_data.mean(),2)
-            median=np.round(np.median(np_data),2)
-            count=len(np_data)
-            t_value=(date_str,float(mean),float(max_value),float(min_value),float(median),count)
+            max_value = np.round(np_data.max(), 2)
+            min_value = np.round(np_data.min(), 2)
+            mean = np.round(np_data.mean(), 2)
+            median = np.round(np.median(np_data), 2)
+            count = len(np_data)
+            t_value = (date_str, float(mean), float(max_value), float(min_value), float(median), count)
             # print(t_value)
 
             try:
-                stock_cursor.execute(update_sql,t_value)
+                stock_cursor.execute(update_sql, t_value)
                 stock_con.commit()
 
             except Exception as e:
@@ -375,8 +270,7 @@ def avg_yjl_history():
 
         finally:
 
-            start=start+datetime.timedelta(days=1)
-
+            start = start + datetime.timedelta(days=1)
 
 
 def main():
@@ -385,6 +279,7 @@ def main():
     # find_zz_zg_diff()
     # find_zz_zg_diff_history()
     avg_yjl_history()
+
 
 if __name__ == "__main__":
     # source_list=sort_top_raise()
