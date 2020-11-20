@@ -6,17 +6,12 @@
 from settings import DBSelector
 import pandas as pd
 import datetime
-from settings import  llogger,send_from_aliyun, check_path
-import tushare as ts
+from configure.settings import send_from_aliyun
+from common.BaseService import BaseService
+from configure.util import notify
 
-logger = llogger('log/task_jsler_double_low.log')
-if not check_path('log'):
-    logger.error('log创建路径出现问题！')
-
-today = datetime.datetime.now().strftime('%Y-%m-%d')
 DB = DBSelector()
 con = DB.get_engine('db_stock', 'qq')
-
 
 def map_rate(x):
     map_dict = {
@@ -47,37 +42,47 @@ def convert(df):
     return df
 
 
-def save_mysql(df):
-    conn2 = DB.get_engine('double_low_full', 'qq')
-    df.to_sql(f'double_low_{today}', con=conn2, if_exists='replace')
+class JslCbDoubleLow(BaseService):
+
+    def __init__(self):
+        super(JslCbDoubleLow, self).__init__('log/task_jsler_double_low.log')
+
+    def save_mysql(self, df):
+        conn2 = DB.get_engine('double_low_full', 'qq')
+        try:
+            df.to_sql(f'double_low_{self.today}', con=conn2, if_exists='replace')
+        except:
+            notify(title='mysql入库出差',desp=f'{self.__class__}')
+
+    def send_mail(self, df):
+        send_content = df.to_html(index=False, border=1, justify='center')
+        send_content = send_content.replace('class', 'cellspacing=\"0\" class')
+
+        title = '{} 可转债综合价格前20名'.format(datetime.datetime.now().strftime('%Y-%m-%d'))
+
+        try:
+            send_from_aliyun(title, send_content, types='html')
+        except Exception as e:
+            self.logger.error('发送邮件出错')
+            self.logger.error(e)
+        else:
+            self.logger.info('发送成功！')
+
+    def jsl_cb_double_low_monitor(self):
+        '''
+        JSL双底可转债
+        :return:
+        '''
+        df = get_df_data()
+        df = convert(df)
+        self.save_mysql(df)
+        self.send_mail(df)
 
 
-def send_mail(df):
-    send_content = df.to_html(index=False, border=1, justify='center')
-    send_content = send_content.replace('class', 'cellspacing=\"0\" class')
-
-    title = '{} 可转债综合价格前20名'.format(datetime.datetime.now().strftime('%Y-%m-%d'))
-
-    try:
-        send_from_aliyun(title, send_content, types='html')
-    except Exception as e:
-        logger.error('发送邮件出错')
-        logger.error(e)
-    else:
-        logger.info('发送成功！')
-
-
-def jsl_cb_double_low_monitor():
-    '''
-    JSL双底可转债
-    :return:
-    '''
-    df = get_df_data()
-    df = convert(df)
-    save_mysql(df)
-    send_mail(df)
+def main():
+    app = JslCbDoubleLow()
+    app.jsl_cb_double_low_monitor()
 
 
 if __name__ == '__main__':
-    jsl_cb_double_low_monitor()
-
+    main()

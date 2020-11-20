@@ -18,3 +18,4 @@ email_list.py
 settings.py
 config.json
 chromedriver.exe
+configure/

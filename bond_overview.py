@@ -1,25 +1,20 @@
 # -*-coding=utf-8-*-
 
-import time
 import requests
-import json
-import pymongo
-import pymysql
-# from config import get_proxy
-import parsel
 import re
-import datetime
 import pandas as pd
-from settings import DBSelector,_json_data
+from configure.settings import DBSelector
+from common.BaseService import BaseService
 from sqlalchemy.types import DATE
 '''
 可转债综合概览
 '''
+DB = DBSelector()
 
-
-class CBSpider(object):
+class CBSpider(BaseService):
 
     def __init__(self, db=None):
+        super(CBSpider, self).__init__('log/bond_overview')
 
         self.url = ''
         self.params = {
@@ -36,13 +31,7 @@ class CBSpider(object):
 
         if db and db == 'mongo':
             # 数据库选择
-            INFO = _json_data['mongo']['arm']
-            host = INFO['host']
-            port = INFO['port']
-            user = INFO['user']
-            password = INFO['password']
-            connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
-            self.db = pymongo.MongoClient(connect_uri)
+            self.db = DB.mongo('qq')
             self.doc = db['']['']
 
     def get(self, _josn=False, binary=False):
@@ -96,26 +85,22 @@ class CBSpider(object):
         '''
         数据存储        
         '''
-        # print(data)
         data_, date_ = data[0], data[1]
         data = eval(data_)
         date = eval(date_)
 
-        # print(data)
-        # print(date)
         df = pd.DataFrame(data)
         origin_columns = list(df.columns)
         df['date'] = date
         origin_columns.insert(0, 'date')
-        # print(df.head(5))
-        # print(origin_columns)
+
         df = df.reindex(columns=origin_columns)
-        # print(df.head(5))
+
         if history == True:
             '''
             历史数据
             '''
-            engine = DBSelector().get_engine('db_stock', 'qq')
+            engine = DB.get_engine('db_stock', 'qq')
 
             try:
                 df.to_sql('bond_overview', con=engine, index_label='id',
@@ -123,34 +108,34 @@ class CBSpider(object):
             except Exception as e:
                 print(e)
 
-            else:
-                print('pass')
         else:
             '''
             当天数据
             '''
             last_data = df.iloc[-1]
-            # current_date = datetime.date
-            if last_data['date'] == datetime.date.today().strftime('%Y-%m-%d'):
-                # pass
+
+            if last_data['date'] == self.today:
+
                 insert_data = list(last_data.values)
                 insert_data = self.convert(insert_data)
                 join_str = ','.join(['%s']*21)
-                conn = DBSelector().get_mysql_conn('db_stock', 'qq')
-                cursor = conn.cursor()
-                cursor.execute(
-                    'SELECT id FROM db_stock.bond_overview order by id desc limit 1')
-                idx = cursor.fetchone()
-                idx = idx[0]
+                self.save_mysql(insert_data,join_str)
 
-                # insert_sql = f'''insert into `bond_overview` (`id`,`date`, `price`,`volume`,`amount`,`count`,`avg_price`,`mid_price`,`avg_premium_rt`,  `avg_ytm_rt`,  `increase_val`,  `increase_rt`,  `turnover_rt`,  `price_90`,  `price_90_100`,  `price_100_110`,  `price_110_120`,  `price_120_130`,  `price_130`,  `idx_price`,  `idx_increase_rt`）value ({join_str})'''
-                insert_sql = f'''insert into `bond_overview` values ({join_str})'''
-                
-                # print(insert_sql)
-                insert_data.insert(0, idx+1)
-                cursor.execute(insert_sql, insert_data)
-                conn.commit()
-                conn.close()
+    def save_mysql(self,insert_data,join_str):
+        conn = DBSelector().get_mysql_conn('db_stock', 'qq')
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT id FROM db_stock.bond_overview order by id desc limit 1')
+        idx = cursor.fetchone()
+        idx = idx[0]
+
+        # insert_sql = f'''insert into `bond_overview` (`id`,`date`, `price`,`volume`,`amount`,`count`,`avg_price`,`mid_price`,`avg_premium_rt`,  `avg_ytm_rt`,  `increase_val`,  `increase_rt`,  `turnover_rt`,  `price_90`,  `price_90_100`,  `price_100_110`,  `price_110_120`,  `price_120_130`,  `price_130`,  `idx_price`,  `idx_increase_rt`）value ({join_str})'''
+        insert_sql = f'''insert into `bond_overview` values ({join_str})'''
+
+        insert_data.insert(0, idx + 1)
+        cursor.execute(insert_sql, insert_data)
+        conn.commit()
+        conn.close()
 
     def convert(self, data_list):
         import numpy
@@ -185,6 +170,9 @@ class CBProcess(CBSpider):
         self.process(result)
 
 
-if __name__ == '__main__':
+def main():
     processor = CBProcess()
     processor.run()
+
+if __name__ == '__main__':
+    main()
