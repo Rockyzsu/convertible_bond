@@ -5,10 +5,11 @@
 
 # 每周跌幅最多的
 import datetime
+import pandas as pd
 from filterbond import get_low_price
 from common.BaseService import BaseService
 from common.DataFetch import DataFetcher
-from configure.settings import DBSelector
+from configure.settings import DBSelector, send_from_aliyun
 
 
 class WeeklyDrop(BaseService):
@@ -23,7 +24,7 @@ class WeeklyDrop(BaseService):
         if not current:
             self.today = datetime.datetime.strptime('2019-11-15', '%Y-%m-%d')
         else:
-            self.today = datetime.datetime.strptime(self.today,'%Y-%m-%d')
+            self.today = datetime.datetime.strptime(self.today, '%Y-%m-%d')
 
         jsl_df = self.datafetch.jsl_bond
         code_list = jsl_df['可转债代码'].values
@@ -52,6 +53,15 @@ class WeeklyDrop(BaseService):
         return m_result_list[:10] + m_result_list[-10:], w_result_list[:10] + w_result_list[
                                                                               -10:], code_dict, price_dict, yjl_dict
 
+    def mail_content(self, input_raw):
+        title = f'{self.today} {self.__type}涨跌榜'
+        df = pd.DataFrame(input_raw)
+        body = df.to_html(index=False)
+        return title, body
+
+    def save_mongodb(self, data):
+        self.mongo['db_price_drop'][f'{self.today}_{self.__type}_drop'].insert_many(data)
+
     def weekly_drop_rank(self, current=True, type_='week'):
         '''
         :type_  week或者month
@@ -59,12 +69,13 @@ class WeeklyDrop(BaseService):
         :param type_:
         :return:
         '''
-
+        self.__type = type_
         month_data, week_data, code_dict, price_dict, yjl_dict = self.get_rank(current)
         if type_ == 'week':
             rank_data = week_data
         else:
             rank_data = month_data
+
         result = []
         for i in rank_data:
             self.logger.info(f'{i[0]} {code_dict.get(i[0])} : {i[1]}%')
@@ -77,11 +88,14 @@ class WeeklyDrop(BaseService):
             d['更新日期'] = self.today
             result.append(d)
 
-        self.mongo['db_price_drop'][f'{self.today}_{type_}_drop'].insert_many(result)
-        print(result)
+        # self.save_mongodb(result)
+
+        title, body = self.mail_content(result)
+        send_from_aliyun(title=title, content=body, types='html')
+
 
 def main():
-    WeeklyDrop().weekly_drop_rank(current=True)  # 正常运行时current = True
+    WeeklyDrop().weekly_drop_rank(current=True, type_='week')  # 正常运行时current = True
 
 
 if __name__ == '__main__':
