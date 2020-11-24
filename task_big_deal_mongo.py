@@ -4,12 +4,12 @@
 # @File : task_cb_deal.py
 # 获取每天的大单数据
 
-from big_deal import BigDeal
+from bigdeal import BigDeal
 
 
 def main():
-    obj = BigDeal()
-    obj.run()
+    app = BigDeal()
+    app.fetch_bigdeal()
 
 
 if __name__ == '__main__':

@@ -2,6 +2,8 @@
 import datetime
 import os
 import re
+import requests
+import parsel
 from loguru import logger
 from configure.util import notify
 
@@ -11,7 +13,6 @@ class BaseService(object):
     def __init__(self, logfile='default.log'):
         self.logger = logger
         self.logger.add(logfile)
-
         self.init_const_data()
 
     def init_const_data(self):
@@ -36,11 +37,73 @@ class BaseService(object):
         with open(path, 'wb') as fp:
             fp.write(content)
 
-    def get(self,url):
-        raise NotImplemented
+    def get(self, _josn=False, binary=False, retry=5):
 
-    def post(self):
-        raise NotImplemented
+        start = 0
+        while start < retry:
+
+            try:
+                r = requests.get(
+                    url=self.url,
+                    params=self.params,
+                    headers=self.headers,
+                    cookies=self.cookie)
+
+            except Exception as e:
+                start += 1
+                continue
+
+            else:
+                if _josn:
+                    result = r.json()
+                elif binary:
+                    result = r.content
+                else:
+                    result = r.text
+                return result
+
+        return None
+
+    def post(self, post_data, _josn=False, binary=False, retry=5):
+
+        start = 0
+        while start < retry:
+
+            try:
+                r = requests.post(
+                    url=self.url,
+                    headers=self.headers,
+                    data=post_data
+                )
+
+            except Exception as e:
+                start += 1
+                continue
+
+            else:
+                if _josn:
+                    result = r.json()
+                elif binary:
+                    result = r.content
+                else:
+                    result = r.text
+                return result
+
+        return None
+
+    def parse(self, content):
+        '''
+        页面解析
+        '''
+        response = parsel.Selector(text=content)
+
+        return None
+
+    def process(self, data, history=False):
+        '''
+        数据存储
+        '''
+        pass
 
     def trading_time(self):
         '''
@@ -112,6 +175,31 @@ class BaseService(object):
             conn.commit()
 
         return ret
+
+
+class HistorySet(object):
+
+    def __init__(self,expire=1800):
+        self.data = {}
+        self.expire = expire
+
+    def add(self,value):
+        now = datetime.datetime.now()
+        expire = now + datetime.timedelta(seconds=self.expire)
+        try:
+            hash(value)
+        except:
+            raise ValueError('value not hashble')
+        else:
+            self.data.update({value:expire})
+
+    def is_expire(self,value):
+        # 没有过期 返回 False
+        if value not in self.data or self.data[value]<datetime.datetime.now():
+            return True
+        else:
+            return False
+
 
 if __name__ == '__main__':
     base = BaseService()

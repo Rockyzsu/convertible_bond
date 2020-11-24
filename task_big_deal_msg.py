@@ -4,7 +4,7 @@
 # @File : big_deal_msg.py
 
 # 获取大单并发送前10的到手机
-from big_deal import BigDeal
+from bigdeal import BigDeal
 
 
 def main():

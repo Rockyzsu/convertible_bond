@@ -2,7 +2,6 @@
 
 # @Time : 2019/4/24 16:55
 # @File : task_zz_drop_than_zg.py
-from configure.util import notify
 from configure.settings import DBSelector, send_from_aliyun
 import numpy as np
 from common.BaseService import BaseService
@@ -51,7 +50,6 @@ class DataFinder(object):
 
         except Exception as e:
             print(e)
-            notify('邮件发送失败', f'{self.__class__}:{e}')
             self.con.rollback()
         else:
             self.con.commit()
@@ -62,7 +60,6 @@ class DataFinder(object):
         try:
             self.cursor.execute(insert_sql, (current, zz_than_zg_count, plug_count, minus_count))
         except Exception as e:
-            notify('邮件发送失败', f'{self.__class__}:{e}')
             self.con.rollback()
         else:
             self.con.commit()
@@ -83,7 +80,7 @@ class KZZCompareZG(BaseService):
 
         np_data, zz_than_zg_count, plug_count, minus_count = self.datasource.zz_data()
 
-        t_value = self.calculate(np_data, self.today)
+        t_value = self.calc_statistics(np_data, self.today)
         self.datasource.update_data(t_value=t_value)
         result_dict = self.all_zz_dict()
 
@@ -104,7 +101,7 @@ class KZZCompareZG(BaseService):
 
         return result_dict
 
-    def calculate(self, np_data, current):
+    def calc_statistics(self, np_data, current):
         max_value = np.round(np_data.max(), 2)
         min_value = np.round(np_data.min(), 2)
         mean = np.round(np_data.mean(), 2)
@@ -163,7 +160,7 @@ class KZZCompareZG(BaseService):
         try:
             send_from_aliyun(title, content, types='html')
         except Exception as e:
-            notify('邮件发送失败', f'{self.__class__}:{e}')
+            self.notify('邮件发送失败', f'{self.__class__}:{e}')
             self.logger.error(e)
 
 

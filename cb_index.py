@@ -3,14 +3,12 @@
 # @Time : 2019/2/11 14:28
 # @File : cb_index.py
 # 可转债指数
-import datetime
 import re
 import requests
 from configure.settings import DBSelector
 from common.BaseService import BaseService
 
 DB = DBSelector()
-
 
 # 获取当天的记录
 class CBIndexJSL(BaseService):

@@ -7,7 +7,7 @@
 import os
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from settings import DBSelector
+from configure.settings import DBSelector,get_config_data
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -24,8 +24,7 @@ else:
     SELENIUM_PATH = './phantomjs'
     driver = webdriver.PhantomJS(executable_path=SELENIUM_PATH)
 
-
-def analysis(pct):
+def calc_statistics(pct):
     bigger = pct[pct >= 0].count()
     smaller = pct[pct < 0].count()
     max_id = pct.argmax()
@@ -69,6 +68,10 @@ def get_XY(bins, pct, label, color):
 class CBDistribution(BaseService):
     def __init__(self):
         super(CBDistribution, self).__init__()
+        root_path = get_config_data('data_path')
+        self.IMGAGE_PATH = os.path.join(root_path,f"{self.today}_cb.png")
+        self.HMTL_PATH = os.path.join(root_path,f"{self.today}_cb.html")
+
         self.check_path('data')
 
     def get_bond_data(self):
@@ -87,7 +90,7 @@ class CBDistribution(BaseService):
         pct = df['可转债涨幅']
         pct_zg = df['正股涨跌幅']
 
-        bigger, smaller, avg, std, max_id, min_id = analysis(pct)
+        bigger, smaller, avg, std, max_id, min_id = calc_statistics(pct)
 
         max_name = df.loc[max_id]['可转债名称']
         max_pct = df.loc[max_id]['可转债涨幅']
@@ -179,9 +182,9 @@ class CBDistribution(BaseService):
 
         )
 
-        bar.render(os.path.join('data', f"{self.today}_cb.html"))
+        bar.render(self.HMTL_PATH)
         # 自定义一个driver
-        make_snapshot(snapshot, bar.render(), f"data/{self.today}_cb.png", driver=driver)
+        make_snapshot(snapshot, bar.render(), self.IMGAGE_PATH, driver=driver)
 
 
 def main():
