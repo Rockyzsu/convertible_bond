@@ -77,7 +77,7 @@ def get_low_price(code, start, end=datetime.date.today().strftime('%Y-%m-%d')):
     m_percent = round((last_closed - pre_closed) / pre_closed * 100, 2)
 
     try:
-        w_pre_closed = df.iloc[-6]['close']
+        w_pre_closed = df.iloc[-6]['close']  # 这里可以保证有6天，否则比例设为0
     except Exception as e:
         w_percent = 0
         # logger.info(f'新债{code}')

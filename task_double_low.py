@@ -4,7 +4,7 @@
 # @File : task_double_low.py
 import tushare as ts
 import datetime
-from filter_bond import main
+from filterbond import main
 
 today = datetime.datetime.now().strftime('%Y-%m-%d')
 cons=ts.get_apis()

@@ -54,7 +54,7 @@ class WeeklyDrop(BaseService):
                                                                               -10:], code_dict, price_dict, yjl_dict
 
     def mail_content(self, input_raw):
-        title = f'{self.today} {self.__type}涨跌榜'
+        title = f'{self.today.strftime("%Y-%m-%d")} {self.__type}涨跌榜'
         df = pd.DataFrame(input_raw)
         body = df.to_html(index=False)
         return title, body

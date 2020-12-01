@@ -3,10 +3,9 @@
 # @File : send_bond_info.py
 # 发送邮件的,集思录双底
 
-from settings import DBSelector
 import pandas as pd
 import datetime
-from configure.settings import send_from_aliyun
+from configure.settings import send_from_aliyun,DBSelector
 from common.BaseService import BaseService
 from configure.util import notify
 

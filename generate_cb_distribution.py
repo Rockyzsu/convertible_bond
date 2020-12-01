@@ -7,7 +7,7 @@
 import os
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from configure.settings import DBSelector,get_config_data
+from configure.settings import DBSelector,config_dict
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -68,7 +68,7 @@ def get_XY(bins, pct, label, color):
 class CBDistribution(BaseService):
     def __init__(self):
         super(CBDistribution, self).__init__()
-        root_path = get_config_data('data_path')
+        root_path = config_dict('data_path')
         self.IMGAGE_PATH = os.path.join(root_path,f"{self.today}_cb.png")
         self.HMTL_PATH = os.path.join(root_path,f"{self.today}_cb.html")
 
@@ -110,7 +110,11 @@ class CBDistribution(BaseService):
             'min_pct': min_pct,
             'zz_list': zz_list,
             'zg_list': zg_list,
-            'result_dict': result_dict
+            'result_dict': result_dict,
+            'bigger':bigger,
+            'smaller':smaller,
+            'avg':avg,
+            'std':std,
 
         }
 
