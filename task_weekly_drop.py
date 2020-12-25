@@ -92,7 +92,7 @@ class WeeklyDrop(BaseService):
 
         title, body = self.mail_content(result)
         send_from_aliyun(title=title, content=body, types='html')
-
+        # print(body)
 
 def main():
     WeeklyDrop().weekly_drop_rank(current=True, type_='week')  # 正常运行时current = True

@@ -71,7 +71,8 @@ def get_low_price(code, start, end=datetime.date.today().strftime('%Y-%m-%d')):
 
     if retry_max == try_time:
         return None, None, None
-
+    if len(df)<5:
+        return  0,0,0
     pre_closed = df.iloc[0]['close']
     last_closed = df.iloc[-1]['close']
     m_percent = round((last_closed - pre_closed) / pre_closed * 100, 2)
