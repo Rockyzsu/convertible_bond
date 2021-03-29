@@ -1,20 +1,24 @@
 # -*-coding=utf-8-*-
-
+import sys
+sys.path.append('..')
 import requests
 import re
 import pandas as pd
 from configure.settings import DBSelector
 from common.BaseService import BaseService
 from sqlalchemy.types import DATE
+import js2py
+
 '''
 可转债综合概览
 '''
 DB = DBSelector()
 
+
 class CBSpider(BaseService):
 
     def __init__(self, db=None):
-        super(CBSpider, self).__init__('log/bond_overview')
+        super(CBSpider, self).__init__('../log/bond_overview.log')
 
         self.url = ''
         self.params = {
@@ -32,9 +36,9 @@ class CBSpider(BaseService):
         if db and db == 'mongo':
             # 数据库选择
             self.db = DB.mongo('qq')
-            self.doc = db['']['']
+            self.doc = db['db_stock']['']
 
-    def get(self, _josn=False, binary=False):
+    def get(self, _json=False, binary=False, retry=5):
 
         try:
             r = requests.get(
@@ -47,14 +51,14 @@ class CBSpider(BaseService):
             print(e)
             return None
         else:
-            if _josn:
+            if _json:
                 return r.json()
             elif binary:
                 return r.content
             else:
                 return r.text
 
-    def post(self, post_data):
+    def post(self, post_data, _josn=False, binary=False, retry=5):
         try:
             r = requests.post(
                 url=self.url,
@@ -73,11 +77,11 @@ class CBSpider(BaseService):
         # response = parsel.Selector(text=content)
         date = re.search('var __date = (\[.*?\]);', content, re.S)
         if date:
-            date = date.group(1)
+            date = date.group()
 
         data = re.search('var __data = ({.*?});', content, re.S)
         if data:
-            data = data.group(1)
+            data = data.group()
 
         return data, date
 
@@ -85,9 +89,11 @@ class CBSpider(BaseService):
         '''
         数据存储        
         '''
+
         data_, date_ = data[0], data[1]
-        data = eval(data_)
-        date = eval(date_)
+
+        data=js2py.eval_js(data_).to_dict()
+        date=js2py.eval_js(date_).to_list()
 
         df = pd.DataFrame(data)
         origin_columns = list(df.columns)
@@ -115,13 +121,12 @@ class CBSpider(BaseService):
             last_data = df.iloc[-1]
 
             if last_data['date'] == self.today:
-
                 insert_data = list(last_data.values)
                 insert_data = self.convert(insert_data)
-                join_str = ','.join(['%s']*21)
-                self.save_mysql(insert_data,join_str)
+                join_str = ','.join(['%s'] * 28)
+                self.save_mysql(insert_data, join_str)
 
-    def save_mysql(self,insert_data,join_str):
+    def save_mysql(self, insert_data, join_str):
         conn = DBSelector().get_mysql_conn('db_stock', 'qq')
         cursor = conn.cursor()
         cursor.execute(
@@ -169,10 +174,10 @@ class CBProcess(CBSpider):
         result = self.parse(content)
         self.process(result)
 
-
 def main():
     processor = CBProcess()
     processor.run()
+
 
 if __name__ == '__main__':
     main()

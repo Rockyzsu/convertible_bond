@@ -61,6 +61,7 @@ def get_low_price(code, start, end=datetime.date.today().strftime('%Y-%m-%d')):
     # 获取某个股票在一个阶段的最低价
     retry_max = 5
     try_time = 0
+    df=None
     while try_time < retry_max:
         try:
             df = ts.get_k_data(code=code, start=start, end=end)
@@ -71,8 +72,9 @@ def get_low_price(code, start, end=datetime.date.today().strftime('%Y-%m-%d')):
 
     if retry_max == try_time:
         return None, None, None
-    if len(df)<5:
+    if df is None:
         return  0,0,0
+
     pre_closed = df.iloc[0]['close']
     last_closed = df.iloc[-1]['close']
     m_percent = round((last_closed - pre_closed) / pre_closed * 100, 2)
@@ -81,12 +83,24 @@ def get_low_price(code, start, end=datetime.date.today().strftime('%Y-%m-%d')):
         w_pre_closed = df.iloc[-6]['close']  # 这里可以保证有6天，否则比例设为0
     except Exception as e:
         w_percent = 0
-        # logger.info(f'新债{code}')
     else:
         w_percent = round((last_closed - w_pre_closed) / w_pre_closed * 100, 2)
 
-    return m_percent, w_percent, last_closed
+    # 计算波动
+    week_df = df.iloc[-5:]
+    high=week_df['high'].max()
+    low=week_df['low'].min()
+    open_price=week_df['open'].iloc[0]
+    volatility=get_volatility(low,high,open_price)
 
+    return m_percent, w_percent, last_closed,volatility
+
+def get_volatility(low,high,open_price):
+    '''
+    获取波动性
+    :return:
+    '''
+    return round((high-low)*1.0/open_price*100,2)
 
 # 所有功能放在一起
 def main():
