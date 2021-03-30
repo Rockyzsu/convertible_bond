@@ -13,4 +13,4 @@
 
 
 - 公众号：可转债量化分析
-![ 公众号 ](./static/gzh.jpg)
+![ 公众号 ](http://www.30daydo.com/uploads/article/20210329/e42c51f95e6e6b41366ee320c1f01316.jpg)
