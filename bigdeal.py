@@ -7,12 +7,13 @@ import tushare as ts
 import pandas as pd
 from common.BaseService import BaseService
 from configure.settings import DBSelector, send_from_aliyun
+from common.TushareUtil import TushareBaseUtil
 
 # 大单定义 手数, 需要在大单数据获取完成后
 BIG_DEAL = 1000
 
 # 获取的历史天数的数据
-DELTA_DAY = 35
+DELTA_DAY = 365*4
 
 
 class BigDeal(BaseService):
@@ -25,6 +26,10 @@ class BigDeal(BaseService):
         self.jisilu_df = self.get_bond()
         self.code_name_dict = dict(zip(list(self.jisilu_df['可转债代码'].values), list(self.jisilu_df['可转债名称'].values)))
         self.mongodb = self.DB.mongo(type='qq')
+
+    def get_trade_date(self):
+        start_date=datetime.datetime.now() +datetime.timedelta(days=-1*DELTA_DAY)
+        return TushareBaseUtil().get_trade_date(start_date=start_date.strftime('%Y%m%d'))
 
     def get_ticks(self, code, date):
         df = ts.get_tick_data(code, date=date, src='tt')
@@ -62,7 +67,7 @@ class BigDeal(BaseService):
         count = min_df[min_df['volume'] > big_deal]['volume'].count()
         return (code, count)
 
-    def get_tick(self, code, date, retry=20):
+    def get_tick(self, code, date, retry=5):
         fs_df = None
 
         for i in range(retry):
@@ -73,7 +78,7 @@ class BigDeal(BaseService):
             except Exception as e:
                 self.logger.error('获取tick失败>>>>code={},date'.format(code, date))
                 self.logger.error(e)
-                time.sleep(random.randint(2, 5))
+                time.sleep(random.randint(5, 25))
 
             else:
                 if fs_df is not None and len(fs_df) > 0:
@@ -115,7 +120,7 @@ class BigDeal(BaseService):
             row['time'] = datetime.datetime.utcfromtimestamp(row['time'] / 1000)
 
         try:
-            self.mongodb['cb_deal'][code].insert_many(js)
+            self.mongodb['cb_deal_backup'][code].insert_many(js)
         except Exception as e:
             self.logger.error(e)
             self.logger.error('插入数据失败')
@@ -140,11 +145,10 @@ class BigDeal(BaseService):
 
         # 获取历史数据的数据看看
         else:
-            delta = DELTA_DAY
-            for i in range(1, delta + 1):
-                d = (datetime.date.today() + datetime.timedelta(days=i * -1)).strftime('%Y-%m-%d')
-                print('going>>>>{}'.format(d))
-                self.total_bonds(d)
+            valid_date = self.get_trade_date()
+            for i in valid_date[::-1]:
+                print('going>>>>{}'.format(i))
+                self.total_bonds(i)
 
     # 发送大单数据到手机
     def analysis(self, date=None, head=300):

@@ -6,10 +6,10 @@
 
 from bigdeal import BigDeal
 
-
+use_today = False
 def main():
     app = BigDeal()
-    app.fetch_bigdeal()
+    app.fetch_bigdeal(today=use_today)
 
 
 if __name__ == '__main__':

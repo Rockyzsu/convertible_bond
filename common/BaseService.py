@@ -1,5 +1,6 @@
 #-*-coding=utf-8-*-
 import datetime
+import json
 import os
 import re
 import requests
@@ -14,13 +15,14 @@ class BaseService(object):
         self.logger = logger
         self.logger.add(logfile)
         self.init_const_data()
+        self.params=None
+        self.cookies=None
 
     def init_const_data(self):
         '''
         常见的数据初始化
         '''
         self.today = datetime.datetime.now().strftime('%Y-%m-%d')
-
 
     def check_path(self, path):
         if not os.path.exists(path):
@@ -32,29 +34,29 @@ class BaseService(object):
     def get_url_filename(self, url):
         return url.split('/')[-1]
 
-
     def save_iamge(self, content, path):
         with open(path, 'wb') as fp:
             fp.write(content)
 
-    def get(self, _josn=False, binary=False, retry=5):
+    def get(self, url, _json=False, binary=False, retry=5):
 
         start = 0
         while start < retry:
 
             try:
                 r = requests.get(
-                    url=self.url,
+                    url=url,
                     params=self.params,
                     headers=self.headers,
-                    cookies=self.cookie)
+                    cookies=self.cookies)
 
             except Exception as e:
+                print(e)
                 start += 1
                 continue
 
             else:
-                if _josn:
+                if _json:
                     result = r.json()
                 elif binary:
                     result = r.content
@@ -64,19 +66,20 @@ class BaseService(object):
 
         return None
 
-    def post(self, post_data, _josn=False, binary=False, retry=5):
+    def post(self, url, post_data, _josn=False, binary=False, retry=5):
 
         start = 0
         while start < retry:
 
             try:
                 r = requests.post(
-                    url=self.url,
+                    url=url,
                     headers=self.headers,
                     data=post_data
                 )
 
             except Exception as e:
+                print(e)
                 start += 1
                 continue
 
@@ -90,6 +93,10 @@ class BaseService(object):
                 return result
 
         return None
+
+    # @property
+    # def headers(self):
+    #     raise NotImplemented
 
     def parse(self, content):
         '''
@@ -97,7 +104,7 @@ class BaseService(object):
         '''
         response = parsel.Selector(text=content)
 
-        return None
+        return response
 
     def process(self, data, history=False):
         '''
@@ -113,7 +120,7 @@ class BaseService(object):
         TRADING = 0
         MORNING_STOP = -1
         AFTERNOON_STOP = 1
-
+        NOON_STOP=-1
         current = datetime.datetime.now()
         year, month, day = current.year, current.month, current.day
         start = datetime.datetime(year, month, day, 9, 23, 0)
@@ -133,6 +140,9 @@ class BaseService(object):
 
         elif current < start:
             return MORNING_STOP
+
+        else:
+            return NOON_STOP
 
     def notify(self,title='',desp=''):
         notify(title,desp)
@@ -158,7 +168,7 @@ class BaseService(object):
         else:
             return True
 
-    def execute(self, cmd, data, conn):
+    def execute(self, cmd, data, conn, logger=None):
 
         cursor = conn.cursor()
 
@@ -168,13 +178,16 @@ class BaseService(object):
             cursor.execute(cmd, data)
         except Exception as e:
             conn.rollback()
-            print('执行数据库错误 {}'.format(e))
+            logger.error('执行数据库错误 {}'.format(e))
             ret = None
         else:
             ret = cursor.fetchall()
             conn.commit()
 
         return ret
+
+    def jsonp2json(self, str_):
+        return json.loads(str_[str_.find('{'):str_.rfind('}')+1])
 
 
 class HistorySet(object):
@@ -199,6 +212,7 @@ class HistorySet(object):
             return True
         else:
             return False
+
 
 
 if __name__ == '__main__':
