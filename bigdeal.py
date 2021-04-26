@@ -121,6 +121,11 @@ class BigDeal(BaseService):
 
         try:
             self.mongodb['cb_deal_backup'][code].insert_many(js)
+
+        except TypeError:
+            pass
+            return {'status': 0, 'code': code}
+
         except Exception as e:
             self.logger.error(e)
             self.logger.error('插入数据失败')
