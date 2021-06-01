@@ -14,7 +14,7 @@ import js2py
 '''
 DB = DBSelector()
 
-
+TABLE_NAME ='bond_overview'
 class CBSpider(BaseService):
 
     def __init__(self, db=None):
@@ -48,7 +48,7 @@ class CBSpider(BaseService):
                 cookies=self.cookie)
 
         except Exception as e:
-            print(e)
+            self.logger.error(e)
             return None
         else:
             if _json:
@@ -109,7 +109,7 @@ class CBSpider(BaseService):
             engine = DB.get_engine('db_stock', 'qq')
 
             try:
-                df.to_sql('bond_overview', con=engine, index_label='id',
+                df.to_sql(TABLE_NAME, con=engine, index_label='id',
                           if_exists='replace', dtype={'date': DATE})
             except Exception as e:
                 print(e)
@@ -119,7 +119,7 @@ class CBSpider(BaseService):
             当天数据
             '''
             last_data = df.iloc[-1]
-
+            self.today='2021-05-14'
             if last_data['date'] == self.today:
                 insert_data = list(last_data.values)
                 insert_data = self.convert(insert_data)
@@ -130,12 +130,12 @@ class CBSpider(BaseService):
         conn = DBSelector().get_mysql_conn('db_stock', 'qq')
         cursor = conn.cursor()
         cursor.execute(
-            'SELECT id FROM db_stock.bond_overview order by id desc limit 1')
+            f'SELECT id FROM db_stock.{TABLE_NAME } order by id desc limit 1')
         idx = cursor.fetchone()
         idx = idx[0]
 
         # insert_sql = f'''insert into `bond_overview` (`id`,`date`, `price`,`volume`,`amount`,`count`,`avg_price`,`mid_price`,`avg_premium_rt`,  `avg_ytm_rt`,  `increase_val`,  `increase_rt`,  `turnover_rt`,  `price_90`,  `price_90_100`,  `price_100_110`,  `price_110_120`,  `price_120_130`,  `price_130`,  `idx_price`,  `idx_increase_rt`）value ({join_str})'''
-        insert_sql = f'''insert into `bond_overview` values ({join_str})'''
+        insert_sql = f'''insert into `{TABLE_NAME}` values ({join_str})'''
 
         insert_data.insert(0, idx + 1)
         cursor.execute(insert_sql, insert_data)

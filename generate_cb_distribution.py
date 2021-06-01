@@ -4,10 +4,15 @@
 # @Author : Rocky C@www.30daydo.com
 
 # 可转债价格分布图
+import datetime
 import os
+import time
+
+import fire
+import requests
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from configure.settings import DBSelector,config_dict
+from configure.settings import DBSelector, config_dict
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -16,13 +21,13 @@ from selenium import webdriver
 from pyecharts.commons.utils import JsCode
 from common.BaseService import BaseService
 
-
 if sys.platform == 'win32':
     SELENIUM_PATH = r'C:\OneDrive\Tool\phantomjs-2.1.1-windows\phantomjs-2.1.1-windows\bin\phantomjs.exe'
     driver = None
 else:
     SELENIUM_PATH = './phantomjs'
     driver = webdriver.PhantomJS(executable_path=SELENIUM_PATH)
+
 
 def calc_statistics(pct):
     bigger = pct[pct >= 0].count()
@@ -66,11 +71,17 @@ def get_XY(bins, pct, label, color):
 
 
 class CBDistribution(BaseService):
-    def __init__(self):
+    def __init__(self, noon=False):
         super(CBDistribution, self).__init__()
         root_path = config_dict('data_path')
-        self.IMGAGE_PATH = os.path.join(root_path,f"{self.today}_cb.png")
-        self.HMTL_PATH = os.path.join(root_path,f"{self.today}_cb.html")
+        self.noon=noon
+        if self.noon:
+            self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb_noon.png")
+            self.HMTL_PATH = os.path.join(root_path, f"{self.today}_cb_noon.html")
+
+        else:
+            self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb.png")
+            self.HMTL_PATH = os.path.join(root_path, f"{self.today}_cb.html")
 
         self.check_path('data')
 
@@ -106,32 +117,151 @@ class CBDistribution(BaseService):
         data = {
             'max_name': max_name,
             'max_pct': max_pct,
-            'min_name':min_name,
+            'min_name': min_name,
             'min_pct': min_pct,
             'zz_list': zz_list,
             'zg_list': zg_list,
             'result_dict': result_dict,
-            'bigger':bigger,
-            'smaller':smaller,
-            'avg':avg,
-            'std':std,
+            'bigger': bigger,
+            'smaller': smaller,
+            'avg': avg,
+            'std': std,
 
         }
 
         return data
 
+    def download(self, url, data, retry=5):
+        headers = {
+            'User-Agent': 'User-Agent:Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
+            'X-Requested-With': 'XMLHttpRequest'
+            }
+        for i in range(retry):
+            try:
+                r = requests.post(url, headers=headers, data=data)
+                if not r.text or r.status_code != 200:
+                    continue
+                else:
+                    return r
+            except Exception as e:
+                self.logger.info(e)
+                self.notify(title='下载失败', desp=f'{self.__class__}')
+                continue
+
+        return None
+
+    def data_parse(self, bond_list, adjust_no_use):
+
+        cell_list = []
+        for item in bond_list:
+            cell_list.append(pd.Series(item.get('cell')))
+        df = pd.DataFrame(cell_list)
+
+        if adjust_no_use:
+
+            # 类型转换 部分含有%
+            df['premium_rt'] = df['premium_rt'].map(lambda x: float(x.replace('%', '')))
+            df['price'] = df['price'].astype('float64')
+            df['convert_price'] = df['convert_price'].astype('float64')
+            df['premium_rt'] = df['premium_rt'].astype('float64')
+            df['redeem_price'] = df['redeem_price'].astype('float64')
+
+            def convert_float(x):
+                try:
+                    ret_float = float(x)
+                except:
+                    ret_float = None
+                return ret_float
+
+            def convert_percent(x):
+                try:
+                    ret = float(x) * 100
+                except:
+                    ret = None
+                return ret
+
+            def remove_percent(x):
+                try:
+                    ret = x.replace(r'%', '')
+                    ret = float(ret)
+                except Exception as e:
+                    ret = None
+
+                return ret
+
+            df['put_convert_price'] = df['put_convert_price'].map(convert_float)
+            df['sprice'] = df['sprice'].map(convert_float)
+            df['ration'] = df['ration'].map(convert_percent)
+            df['volume'] = df['volume'].map(convert_float)
+            df['convert_amt_ratio'] = df['convert_amt_ratio'].map(remove_percent)
+            df['ration_rt'] = df['ration_rt'].map(convert_float)
+            df['increase_rt'] = df['increase_rt'].map(remove_percent)
+            df['sincrease_rt'] = df['sincrease_rt'].map(remove_percent)
+
+            rename_columns = {'bond_id': '可转债代码', 'bond_nm': '可转债名称', 'price': '可转债价格', 'stock_nm': '正股名称',
+                              'stock_cd': '正股代码',
+                              'sprice': '正股现价',
+                              'sincrease_rt': '正股涨跌幅',
+                              'convert_price': '最新转股价', 'premium_rt': '溢价率', 'increase_rt': '可转债涨幅',
+                              'put_convert_price': '回售触发价', 'convert_dt': '转股起始日',
+                              'short_maturity_dt': '到期时间', 'volume': '成交额(万元)',
+                              'redeem_price': '强赎价格', 'year_left': '剩余时间',
+                              'next_put_dt': '回售起始日', 'rating_cd': '评级',
+                              # 'issue_dt': '发行时间',
+                              # 'redeem_tc': '强制赎回条款',
+                              # 'adjust_tc': '下修条件',
+                              'adjust_tip': '下修提示',
+                              # 'put_tc': '回售',
+                              'adj_cnt': '下调次数',
+                              #   'ration':'已转股比例'
+                              'convert_amt_ratio': '转债剩余占总市值比',
+                              'curr_iss_amt': '剩余规模', 'orig_iss_amt': '发行规模',
+                              'ration_rt': '股东配售率',
+                              'redeem_flag': '发出强赎公告',
+                              'redeem_dt': '强赎日期',
+                              'guarantor': '担保',
+                              }
+
+            df = df.rename(columns=rename_columns)
+            df = df[list(rename_columns.values())]
+            df['更新日期'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+
+        df = df.set_index('可转债代码', drop=True)
+        return df
+    def get_bond_realtime(self):
+        post_data = {
+            'btype': 'C',
+            'listed': 'Y',
+            'rp': '50',
+            'is_search': 'N',
+        }
+        timestamp = int(time.time() * 1000)
+        self.url = 'https://www.jisilu.cn/data/cbnew/cb_list/?___jsl=LST___t={}'.format(timestamp)
+        js = self.download(self.url, data=post_data)
+        if not js:
+            return None
+
+        ret = js.json()
+        bond_list = ret.get('rows', {})
+        df = self.data_parse(bond_list, True)
+        return df
+
     def generate_html(self):
-        df = self.get_bond_data()
+        if self.noon:
+            df = self.get_bond_realtime()
+            df=df.reset_index()
+        else:
+            df = self.get_bond_data()
         data = self.get_XY_data(df)
 
-        bigger= data['bigger']
-        smaller= data['smaller']
-        avg= data['avg']
-        std= data['std']
-        max_name= data['max_name']
-        max_pct= data['max_pct']
-        min_name= data['min_name']
-        min_pct= data['min_pct']
+        bigger = data['bigger']
+        smaller = data['smaller']
+        avg = data['avg']
+        std = data['std']
+        max_name = data['max_name']
+        max_pct = data['max_pct']
+        min_name = data['min_name']
+        min_pct = data['min_pct']
 
         bar = (
             Bar()
@@ -191,10 +321,10 @@ class CBDistribution(BaseService):
         make_snapshot(snapshot, bar.render(), self.IMGAGE_PATH, driver=driver)
 
 
-def main():
-    app = CBDistribution()
+def main(noon=False):
+    app = CBDistribution(noon)
     app.generate_html()
 
 
 if __name__ == '__main__':
-    main()
+    fire.Fire(main)
