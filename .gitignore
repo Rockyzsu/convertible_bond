@@ -20,3 +20,5 @@ config.json
 chromedriver.exe
 configure/
 data/
+log/
+
