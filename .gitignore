@@ -19,3 +19,4 @@ settings.py
 config.json
 chromedriver.exe
 configure/
+data/

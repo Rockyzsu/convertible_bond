@@ -13,7 +13,8 @@ from common.TushareUtil import TushareBaseUtil
 BIG_DEAL = 1000
 
 # 获取的历史天数的数据
-DELTA_DAY = 365*4
+# DELTA_DAY = 365*4 + 30 * 5
+DELTA_DAY = 360
 
 
 class BigDeal(BaseService):
@@ -25,11 +26,11 @@ class BigDeal(BaseService):
         self.db_stock_engine = self.DB.get_engine('db_stock', 'qq')
         self.jisilu_df = self.get_bond()
         self.code_name_dict = dict(zip(list(self.jisilu_df['可转债代码'].values), list(self.jisilu_df['可转债名称'].values)))
-        self.mongodb = self.DB.mongo(type='qq')
+        self.mongodb = self.DB.mongo(type_='local')
 
-    def get_trade_date(self):
+    def get_trade_date(self,end_date=None):
         start_date=datetime.datetime.now() +datetime.timedelta(days=-1*DELTA_DAY)
-        return TushareBaseUtil().get_trade_date(start_date=start_date.strftime('%Y%m%d'))
+        return TushareBaseUtil().get_trade_date(start_date=start_date.strftime('%Y%m%d'),end_date=end_date)
 
     def get_ticks(self, code, date):
         df = ts.get_tick_data(code, date=date, src='tt')
@@ -76,7 +77,7 @@ class BigDeal(BaseService):
                 fs_df = ts.get_tick_data(code, date=date, src='tt')
 
             except Exception as e:
-                self.logger.error('获取tick失败>>>>code={},date'.format(code, date))
+                self.logger.error('获取tick失败>>>>code={},{}'.format(code, date))
                 self.logger.error(e)
                 time.sleep(random.randint(5, 25))
 
@@ -145,7 +146,8 @@ class BigDeal(BaseService):
 
         # 获取历史数据的数据看看
         else:
-            valid_date = self.get_trade_date()
+            last_fetch_day='20210312'
+            valid_date = self.get_trade_date(end_date=last_fetch_day)
             for i in valid_date[::-1]:
                 print('going>>>>{}'.format(i))
                 self.total_bonds(i)

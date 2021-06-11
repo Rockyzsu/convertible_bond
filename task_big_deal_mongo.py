@@ -6,7 +6,7 @@
 
 from bigdeal import BigDeal
 
-use_today = False
+use_today = False # 是否今天最新数据
 def main():
     app = BigDeal()
     app.fetch_bigdeal(today=use_today)

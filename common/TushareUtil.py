@@ -18,13 +18,15 @@ class TushareBaseUtil:
         self.pro = ts.pro_api()
 
 
-    def get_trade_date(self,start_date=None, end_date=datetime.datetime.now().strftime('%Y%m%d')):
+    def get_trade_date(self,start_date=None, end_date=None):
         '''
         返回交易日历
         :param start_date:
         :param end_date:
         :return:
         '''
+        if end_date is None:
+            end_date=datetime.datetime.now().strftime('%Y%m%d')
         df = self.pro.trade_cal(exchange='', is_open='1',start_date=start_date, end_date=end_date)
         return df['cal_date'].tolist()
 
