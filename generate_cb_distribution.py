@@ -20,6 +20,9 @@ import sys
 from selenium import webdriver
 from pyecharts.commons.utils import JsCode
 from common.BaseService import BaseService
+from configure.util import read_web_headers_cookies
+from datahub.jsl_login import login,headers
+from configure import config
 
 if sys.platform == 'win32':
     SELENIUM_PATH = r'C:\OneDrive\Tool\phantomjs-2.1.1-windows\phantomjs-2.1.1-windows\bin\phantomjs.exe'
@@ -71,6 +74,7 @@ def get_XY(bins, pct, label, color):
 
 
 class CBDistribution(BaseService):
+
     def __init__(self, noon=False):
         super(CBDistribution, self).__init__()
         root_path = config_dict('data_path')
@@ -132,13 +136,11 @@ class CBDistribution(BaseService):
         return data
 
     def download(self, url, data, retry=5):
-        headers = {
-            'User-Agent': 'User-Agent:Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
-            'X-Requested-With': 'XMLHttpRequest'
-            }
+        session = login(config.jsl_user,config.jsl_password)
+        # headers,cookies = read_web_headers_cookies('jsl',headers=True,cookies=True)
         for i in range(retry):
             try:
-                r = requests.post(url, headers=headers, data=data)
+                r = session.post(url, headers=headers, data=data)
                 if not r.text or r.status_code != 200:
                     continue
                 else:

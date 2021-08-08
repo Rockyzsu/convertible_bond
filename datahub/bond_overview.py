@@ -1,10 +1,12 @@
 # -*-coding=utf-8-*-
 import sys
+
 sys.path.append('..')
 import requests
 import re
 import pandas as pd
 from configure.settings import DBSelector
+from configure.util import read_web_headers_cookies
 from common.BaseService import BaseService
 from sqlalchemy.types import DATE
 import js2py
@@ -14,7 +16,9 @@ import js2py
 '''
 DB = DBSelector()
 
-TABLE_NAME ='bond_overview'
+TABLE_NAME = 'bond_overview'
+
+
 class CBSpider(BaseService):
 
     def __init__(self, db=None):
@@ -24,28 +28,22 @@ class CBSpider(BaseService):
         self.params = {
             # TODO 添加 params query 参数
         }
-        self.headers = {
-            # TODO 添加headers
-        }
 
-        self.cookie = {
-            # TODO 添加cookies
-
-        }
+        self.headers, self.cookies = read_web_headers_cookies('jsl',headers=True, cookies=True)
 
         if db and db == 'mongo':
             # 数据库选择
             self.db = DB.mongo('qq')
-            self.doc = db['db_stock']['']
+            self.doc = db['db_stock']['']  # 怎么空了
 
-    def get(self, _json=False, binary=False, retry=5):
+    def get(self, url=None, _json=False, binary=False, retry=5):
 
         try:
             r = requests.get(
                 url=self.url,
                 params=self.params,
                 headers=self.headers,
-                cookies=self.cookie)
+                cookies=self.cookies)
 
         except Exception as e:
             self.logger.error(e)
@@ -58,7 +56,7 @@ class CBSpider(BaseService):
             else:
                 return r.text
 
-    def post(self, post_data, _josn=False, binary=False, retry=5):
+    def post(self, url, post_data, _josn=False, binary=False, retry=5):
         try:
             r = requests.post(
                 url=self.url,
@@ -92,8 +90,8 @@ class CBSpider(BaseService):
 
         data_, date_ = data[0], data[1]
 
-        data=js2py.eval_js(data_).to_dict()
-        date=js2py.eval_js(date_).to_list()
+        data = js2py.eval_js(data_).to_dict()
+        date = js2py.eval_js(date_).to_list()
 
         df = pd.DataFrame(data)
         origin_columns = list(df.columns)
@@ -119,18 +117,19 @@ class CBSpider(BaseService):
             当天数据
             '''
             last_data = df.iloc[-1]
-            self.today='2021-05-14'
+            # self.today = '2021-05-14'
             if last_data['date'] == self.today:
                 insert_data = list(last_data.values)
                 insert_data = self.convert(insert_data)
                 join_str = ','.join(['%s'] * 28)
+                # print(insert_data)
                 self.save_mysql(insert_data, join_str)
 
     def save_mysql(self, insert_data, join_str):
         conn = DBSelector().get_mysql_conn('db_stock', 'qq')
         cursor = conn.cursor()
         cursor.execute(
-            f'SELECT id FROM db_stock.{TABLE_NAME } order by id desc limit 1')
+            f'SELECT id FROM db_stock.{TABLE_NAME} order by id desc limit 1')
         idx = cursor.fetchone()
         idx = idx[0]
 
@@ -158,21 +157,13 @@ class CBProcess(CBSpider):
     def __init__(self):
         super(CBProcess, self).__init__()
         self.url = 'https://www.jisilu.cn/data/cbnew/cb_index/'
-        self.headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Host": "www.jisilu.cn",
-            "Referer": "https://www.jisilu.cn/data/cbnew/",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/69.0.3497.81 Chrome/69.0.3497.81 Safari/537.36",
-        }
+
 
     def run(self):
         content = self.get()
         result = self.parse(content)
         self.process(result)
+
 
 def main():
     processor = CBProcess()
