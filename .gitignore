@@ -22,3 +22,5 @@ configure/
 data/
 log/
 settings.json
+/plot_image
+course/

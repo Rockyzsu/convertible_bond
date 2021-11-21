@@ -19,7 +19,7 @@ class DataFinder(object):
 
     def zz_data(self):
 
-        zz_than_zg = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `正股涨跌幅`<=0'
+        zz_than_zg = 'select count(*) from tb_bond_jisilu WHERE `正股涨跌幅`>=`可转债涨幅` and `可转债涨幅`<=0'
         minus_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`<0'
         plug_count_cmd = 'select count(*) from tb_bond_jisilu where `可转债涨幅`>=0'
 
