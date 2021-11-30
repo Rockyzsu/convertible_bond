@@ -3,6 +3,8 @@ import datetime
 import json
 import os
 import re
+import time
+
 import requests
 import parsel
 from loguru import logger
@@ -51,7 +53,7 @@ class BaseService(object):
                     cookies=self.cookies)
 
             except Exception as e:
-                print(e)
+                print('base class error',e)
                 start += 1
                 continue
 
@@ -66,7 +68,7 @@ class BaseService(object):
 
         return None
 
-    def post(self, url, post_data, _josn=False, binary=False, retry=5):
+    def post(self, url, post_data, _json=False, binary=False, retry=5):
 
         start = 0
         while start < retry:
@@ -84,19 +86,22 @@ class BaseService(object):
                 continue
 
             else:
-                if _josn:
+
+                if _json:
+                    r.encoding='utf8'
                     result = r.json()
                 elif binary:
                     result = r.content
                 else:
+
                     result = r.text
                 return result
 
         return None
 
-    # @property
-    # def headers(self):
-    #     raise NotImplemented
+    @property
+    def headers(self):
+        raise NotImplemented
 
     def parse(self, content):
         '''
@@ -111,6 +116,8 @@ class BaseService(object):
         数据存储
         '''
         pass
+    def time_str(self,x):
+        return x.strftime('%Y-%m-%d')
 
     def trading_time(self):
         '''
@@ -144,26 +151,26 @@ class BaseService(object):
         else:
             return NOON_STOP
 
-    def notify(self,title='',desp=''):
-        notify(title,desp)
+    def notify(self, title='', desp=''):
+        notify(title, desp)
 
-    def weekday(self,day=datetime.datetime.now().strftime('%Y-%m-%d')):
+    def weekday(self, day=datetime.datetime.now().strftime('%Y-%m-%d')):
         '''判断星期几'''
 
-        if re.search('\d{4}-\d{2}-\d{2}',day):
+        if re.search('\d{4}-\d{2}-\d{2}', day):
             fmt = '%Y-%m-%d'
-        elif re.search('\d{8}',day):
+        elif re.search('\d{8}', day):
             fmt = '%Y%m%d'
         else:
             raise ValueError('请输入正确的日期格式')
 
-        current_date = datetime.datetime.strptime(day,fmt)
-        year_2000th =datetime.datetime(year=2000,month=1,day=2)
+        current_date = datetime.datetime.strptime(day, fmt)
+        year_2000th = datetime.datetime(year=2000, month=1, day=2)
         day_diff = current_date-year_2000th
-        return day_diff.days%7
+        return day_diff.days % 7
 
-    def is_weekday(self,day=datetime.datetime.now().strftime('%Y-%m-%d')):
-        if self.weekday(day) in [0,6]:
+    def is_weekday(self, day=datetime.datetime.now().strftime('%Y-%m-%d')):
+        if self.weekday(day) in [0, 6]:
             return False
         else:
             return True
@@ -178,7 +185,7 @@ class BaseService(object):
             cursor.execute(cmd, data)
         except Exception as e:
             conn.rollback()
-            logger.error('执行数据库错误 {}'.format(e))
+            logger.error('执行数据库错误 {},{}'.format(e,cmd))
             ret = None
         else:
             ret = cursor.fetchall()
@@ -189,14 +196,49 @@ class BaseService(object):
     def jsonp2json(self, str_):
         return json.loads(str_[str_.find('{'):str_.rfind('}')+1])
 
+    def set_proxy_param(self,proxy):
+        self.proxy_ip = proxy
+
+    def get_proxy(self,retry=10):
+
+        if not hasattr(self,'proxy_ip'):
+            raise AttributeError('Please set proxy ip before use it')
+
+        proxyurl = f'http://{self.proxy_ip}/dynamicIp/common/getDynamicIp.do'
+        count = 0
+        for i in range(retry):
+            try:
+                r = requests.get(proxyurl, timeout=10)
+            except Exception as e:
+                print(e)
+                count += 1
+                print('代理获取失败,重试' + str(count))
+                time.sleep(1)
+
+            else:
+                js = r.json()
+                proxyServer = '://{0}:{1}'.format(js.get('ip'), js.get('port'))
+
+                proxies_random = {
+                    'http': 'http'+proxyServer,
+                    'https':'https'+proxyServer,
+                }
+                return proxies_random
+
+        return None
+
+    def convert_timestamp(self, t):
+        return datetime.datetime.fromtimestamp(int(t / 1000)).strftime('%Y-%m-%d')
+
+
 
 class HistorySet(object):
 
-    def __init__(self,expire=1800):
+    def __init__(self, expire=1800):
         self.data = {}
         self.expire = expire
 
-    def add(self,value):
+    def add(self, value):
         now = datetime.datetime.now()
         expire = now + datetime.timedelta(seconds=self.expire)
         try:
@@ -204,17 +246,18 @@ class HistorySet(object):
         except:
             raise ValueError('value not hashble')
         else:
-            self.data.update({value:expire})
+            self.data.update({value: expire})
 
-    def is_expire(self,value):
+    def is_expire(self, value):
         # 没有过期 返回 False
-        if value not in self.data or self.data[value]<datetime.datetime.now():
+        if value not in self.data or self.data[value] < datetime.datetime.now():
             return True
         else:
             return False
 
 
-
 if __name__ == '__main__':
     base = BaseService()
     base.is_weekday()
+    # base.set_proxy_param()
+    print(base.get_proxy())

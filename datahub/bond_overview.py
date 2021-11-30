@@ -10,7 +10,7 @@ from configure.util import read_web_headers_cookies
 from common.BaseService import BaseService
 from sqlalchemy.types import DATE
 import js2py
-
+import numpy as np
 '''
 可转债综合概览
 '''
@@ -29,7 +29,7 @@ class CBSpider(BaseService):
             # TODO 添加 params query 参数
         }
 
-        self.headers, self.cookies = read_web_headers_cookies('jsl',headers=True, cookies=True)
+        self.headers_, self.cookies = read_web_headers_cookies('jsl',headers=True, cookies=True)
 
         if db and db == 'mongo':
             # 数据库选择
@@ -42,7 +42,7 @@ class CBSpider(BaseService):
             r = requests.get(
                 url=self.url,
                 params=self.params,
-                headers=self.headers,
+                headers=self.headers_,
                 cookies=self.cookies)
 
         except Exception as e:
@@ -56,7 +56,7 @@ class CBSpider(BaseService):
             else:
                 return r.text
 
-    def post(self, url, post_data, _josn=False, binary=False, retry=5):
+    def post(self, url, post_data, _json=False, binary=False, retry=5):
         try:
             r = requests.post(
                 url=self.url,
@@ -82,6 +82,13 @@ class CBSpider(BaseService):
             data = data.group()
 
         return data, date
+    def prepare_data(self,data_dict):
+        total_len = len(data_dict['amount'])
+        for k,v in data_dict.items():
+            if len(v)!=total_len:
+                delta = total_len-len(v)
+                data_dict[k].extend([np.nan]*delta)
+        return data_dict
 
     def process(self, data, history=False):
         '''
@@ -92,7 +99,7 @@ class CBSpider(BaseService):
 
         data = js2py.eval_js(data_).to_dict()
         date = js2py.eval_js(date_).to_list()
-
+        data=self.prepare_data(data)
         df = pd.DataFrame(data)
         origin_columns = list(df.columns)
         df['date'] = date

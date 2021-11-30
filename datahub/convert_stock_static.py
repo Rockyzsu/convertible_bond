@@ -31,7 +31,7 @@ class BondModel(Base):
     total_zg_num = Column(FLOAT, comment='累计转股数目')
     zg_percent = Column(FLOAT, comment='累计转股比例')
     trading_date = Column(DATE, comment='转股日')
-    crawltime = Column(Datetime, comment='抓取日期')
+    crawltime = Column(DateTime, comment='抓取日期')
 
     def __str__(self):
         return f'<{self.cvtbond_abbr}><{self.cvtbond_code}>'

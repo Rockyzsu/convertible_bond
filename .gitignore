@@ -24,3 +24,7 @@ log/
 settings.json
 /plot_image
 course/
+.ipynb_checkpoints/
+*.zip
+*.xls
+*.xlsx

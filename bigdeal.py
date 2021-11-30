@@ -26,7 +26,7 @@ class BigDeal(BaseService):
         self.db_stock_engine = self.DB.get_engine('db_stock', 'qq')
         self.jisilu_df = self.get_bond()
         self.code_name_dict = dict(zip(list(self.jisilu_df['可转债代码'].values), list(self.jisilu_df['可转债名称'].values)))
-        self.mongodb = self.DB.mongo(type_='local')
+        self.mongodb = self.DB.mongo(type='local')
 
     def get_trade_date(self,end_date=None):
         start_date=datetime.datetime.now() +datetime.timedelta(days=-1*DELTA_DAY)
