@@ -24,7 +24,7 @@
 
 
 # 知识星球
-！[知识星球](./static/zsxq.png)
+![知识星球](./static/zsxq.png)
 
 # 公众号：可转债量化分析
 ![ 公众号 ](./static/gzh.jpg)
