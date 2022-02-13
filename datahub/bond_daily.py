@@ -3,34 +3,36 @@
 # @Time : 2019/7/1 16:50
 # @File : bond_daily.py
 # 收集可转债的市场全景图
-from configure.settings import DBSelector, send_from_aliyun, llogger
+import sys
 
+sys.path.append('..')
+from configure.settings import DBSelector, send_from_aliyun, llogger
 import pandas as pd
 import datetime
-# from config import token
 import tushare as ts
+from common.BaseService import BaseService
 
 
-
-class BondDailyInfo():
-
+class BondDailyInfo(BaseService):
 
     def __init__(self):
+        super(BondDailyInfo, self).__init__('../log/bond_daily.log')
+
         today = datetime.datetime.now().strftime('%Y-%m-%d')
         today_fmt = datetime.datetime.now().strftime('%Y%m%d')
         # today='2020-02-06'
         # today_fmt='20200206'
+
         cons = ts.get_apis()
-        logger = llogger('log/bond_daily.log')
+        # logger = llogger('log/bond_daily.log')
         # ts.set_token(token)
-        DB = DBSelector()
+        self.DB = DBSelector()
         # pro = ts.pro_api()
-        conn = DB.get_mysql_conn('db_bond_daily', 'qq')
+        self.conn = self.DB.get_mysql_conn('db_bond_daily', 'qq')
 
         self.creat_table(today)
 
-
-    def creat_table(self,day):
+    def creat_table(self, day):
         '''
         建表
         :param day:
@@ -39,38 +41,38 @@ class BondDailyInfo():
         tb_name = 'bond_{}'.format(day)
         create_cmd = 'create table if not exists `{tb_name}` (`date` varchar(20),`code` varchar(10) primary key,`name` varchar(16),`open` float ,' \
                      '`close` float,`high` float,`low` float,`vol` float,`amount` float) '.format(tb_name=tb_name)
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         try:
             cursor.execute(create_cmd)
-            conn.commit()
+            self.conn.commit()
         except Exception as e:
-            logger.error(e)
+            self.logger.error(e)
             return False
         else:
             return True
 
 
-def read_data_source(today):
-    engine = DB.get_engine('db_jisilu', 'qq')
+    def read_data_source(today):
+        engine = DB.get_engine('db_jisilu', 'qq')
 
-    try:
-        df = pd.read_sql('tb_jsl_{}'.format(today), con=engine)
-    except Exception as e:
-        logger.error(e)
+        try:
+            df = pd.read_sql('tb_jsl_{}'.format(today), con=engine)
+        except Exception as e:
+            logger.error(e)
 
-        send_from_aliyun('代码{}出错\n读取表tb_jsl_{}失败'.format('bond_daily', today), '{}'.format(today))
-        return None
-    else:
-        return df
+            send_from_aliyun('代码{}出错\n读取表tb_jsl_{}失败'.format('bond_daily', today), '{}'.format(today))
+            return None
+        else:
+            return df
 
 
-def np_to_py_float(d):
-    try:
-        d = float(d)
-    except Exception as e:
-        return 0
-    else:
-        return d
+    def np_to_py_float(d):
+        try:
+            d = float(d)
+        except Exception as e:
+            return 0
+        else:
+            return d
 
 
 def loop_data():
@@ -123,30 +125,29 @@ def loop_data():
             else:
                 conn.commit()
 
-
-def daily(code):
-    global cons
-    retry = 5
-    t = 0
-    df = None
-    while t < retry:
-        try:
-            df = ts.bar(code, conn=cons, freq='D', start_date=today, end_date='')
-        except Exception as e:
-            logger.error(e)
-            cons = ts.get_apis()
-
-            t += 1
-        else:
-            if df is not None and not df.empty:
-                break
-            else:
-                # print(df)
-                logger.error('重试')
+    def daily(code):
+        global cons
+        retry = 5
+        t = 0
+        df = None
+        while t < retry:
+            try:
+                df = ts.bar(code, conn=cons, freq='D', start_date=today, end_date='')
+            except Exception as e:
+                logger.error(e)
                 cons = ts.get_apis()
-                t += 1
 
-    return df
+                t += 1
+            else:
+                if df is not None and not df.empty:
+                    break
+                else:
+                    # print(df)
+                    logger.error('重试')
+                    cons = ts.get_apis()
+                    t += 1
+
+        return df
 
 
 if __name__ == '__main__':
