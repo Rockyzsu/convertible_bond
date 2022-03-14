@@ -6,13 +6,14 @@
 import sys
 
 sys.path.append('..')
-from configure.settings import DBSelector, send_from_aliyun, llogger
+from configure.settings import DBSelector
+from configure.util import send_from_aliyun
 import pandas as pd
 import datetime
 import tushare as ts
 from common.BaseService import BaseService
 
-
+DB=DBSelector()
 class BondDailyInfo(BaseService):
 
     def __init__(self):

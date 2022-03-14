@@ -6,7 +6,8 @@ Contact: weigesysu@qq.com
 
 import datetime
 import tushare as ts
-from settings import DBSelector, llogger, send_from_aliyun
+from configure.settings import DBSelector
+from configure.util import send_from_aliyun
 import pandas as pd
 import numpy as np
 

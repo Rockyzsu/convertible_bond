@@ -147,7 +147,7 @@ class CBDistribution(BaseService):
                     return r
             except Exception as e:
                 self.logger.info(e)
-                self.notify(title='下载失败', desp=f'{self.__class__}')
+                self.notify(title=f'{self.__class__}下载失败')
                 continue
 
         return None

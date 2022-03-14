@@ -12,7 +12,8 @@ import pandas as pd
 from filterbond import get_low_price
 from common.BaseService import BaseService
 from common.DataFetch import DataFetcher
-from configure.settings import DBSelector, send_from_aliyun
+from configure.settings import DBSelector
+from configure.util import send_from_aliyun
 
 
 class WeeklyDrop(BaseService):
