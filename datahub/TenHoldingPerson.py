@@ -23,6 +23,7 @@ class TopTheHolding(BaseService):
     def __init__(self):
         super(TopTheHolding, self).__init__(f'../log/TopTenHoldingPersion.log')
         self.db = DBSelector()
+        self.today = datetime.datetime.today().strftime('%Y-%m-%d')
 
     def get_jsl_data(self):
         data = self.data_fetcher.jsl_bond
@@ -46,13 +47,18 @@ class TopTheHolding(BaseService):
         url = 'https://emh5.eastmoney.com/api/KeZhuanZhai/JiBenXinXi/GetShiDaChiYouRenList'
         data = {"fc": f"{code}{post_fix}", "color": "w", "pageSize": 1}
         js = self.post(url=url, post_data=data, _json=True)
+        print(js)
         return js
 
     def get_mongo_db(self):
         return self.db.mongo('qq')['db_stock']
-
+    
     def parse_json(self, js, code):
         result_list = []
+
+        if js is None or js.get('Result') is None:
+            return result_list
+
         for person in js.get('Result', {}).get('ShiDaChiYouRenList', []):
             person_dict = {}
 
@@ -76,12 +82,16 @@ class TopTheHolding(BaseService):
         return result_list
 
     def dump_mongodb(self, result_list):
+        if len(result_list)==0:
+            print('empty')
+            return
+            
         try:
-            self.mongodb['bond_top_10_holding'].insert_many(result_list)
+            self.mongodb['bond_top_10_holding_{}'.format(self.today)].insert_many(result_list)
         except Exception as e:
             print(e)
             self.mongodb = self.get_mongo_db()
-            self.mongodb['bond_top_10_holding'].insert_many(result_list)
+            self.mongodb['bond_top_10_holding_{}'.format(self.today)].insert_many(result_list)
 
     def run(self):
         self.init_db()

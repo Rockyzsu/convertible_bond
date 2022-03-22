@@ -2,7 +2,8 @@
 
 # @Time : 2019/4/24 16:55
 # @File : task_zz_drop_than_zg.py
-from configure.settings import DBSelector, send_from_aliyun
+from configure.settings import DBSelector
+from configure.util import send_from_aliyun
 import numpy as np
 from common.BaseService import BaseService
 
@@ -160,7 +161,7 @@ class KZZCompareZG(BaseService):
         try:
             send_from_aliyun(title, content, types='html')
         except Exception as e:
-            self.notify('邮件发送失败', f'{self.__class__}:{e}')
+            self.notify(f'{self.__class__}:{e}邮件发送失败')
             self.logger.error(e)
 
 

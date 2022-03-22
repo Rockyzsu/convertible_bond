@@ -28,3 +28,6 @@ course/
 *.zip
 *.xls
 *.xlsx
+*.job
+*.m
+*.dot

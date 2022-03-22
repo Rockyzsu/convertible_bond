@@ -12,9 +12,9 @@ import sys
 sys.path.append('..')
 import pandas as pd
 import datetime
-from configure.settings import send_from_aliyun,DBSelector
+from configure.settings import DBSelector
+from configure.util import send_from_aliyun
 from common.BaseService import BaseService
-from configure.util import notify
 
 
 def map_rate(x):
@@ -59,7 +59,7 @@ class JslCbDoubleLow(BaseService):
         try:
             df.to_sql(f'double_low_{self.today}', con=conn2, if_exists='replace')
         except:
-            notify(title='mysql入库出差',desp=f'{self.__class__}')
+            self.notify(title=f'{self.__class__}mysql入库出差')
 
     def send_mail(self, df):
         df['可转债综合价格']=df['可转债综合价格'].map(lambda x:round(x,1))

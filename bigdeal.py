@@ -6,7 +6,8 @@ import time
 import tushare as ts
 import pandas as pd
 from common.BaseService import BaseService
-from configure.settings import DBSelector, send_from_aliyun
+from configure.settings import DBSelector
+from configure.util import send_from_aliyun
 from common.TushareUtil import TushareBaseUtil
 
 # 大单定义 手数, 需要在大单数据获取完成后
@@ -108,7 +109,7 @@ class BigDeal(BaseService):
         ret = self.save_mongo(code, fs_df)
 
         if ret.get('status') == -1:
-            self.notify('bigdeal', 'bigdeal保存mongo出错')
+            self.notify('bigdeal保存mongo出错')
             self.logger.error('保存失败 >>>> code={}, date={}'.format(code, date))
         else:
             self.logger.info('保存成功 >>>> code={}, date={}'.format(code, date))
@@ -190,7 +191,7 @@ class BigDeal(BaseService):
         try:
             send_from_aliyun(title, content)
         except Exception as e:
-            self.notify('bigdeal msg', 'bigdeal send failed')
+            self.notify('bigdeal send failed')
             self.logger.error(e)
         else:
             self.logger.info('发送成功')
