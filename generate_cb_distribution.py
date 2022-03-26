@@ -268,13 +268,13 @@ class CBDistribution(BaseService):
         bar = (
             Bar()
                 .add_xaxis(list(data['result_dict'].keys()))
-                .add_yaxis(f"{self.today}-可转债价格分布", data['zz_list'], category_gap=3)
-                .add_yaxis(f"{self.today}-正股价格分布", data['zg_list'], category_gap=3)
+                .add_yaxis(f"{self.today}-可转债涨幅分布", data['zz_list'], category_gap=3)
+                .add_yaxis(f"{self.today}-正股涨幅分布", data['zg_list'], category_gap=3)
                 .set_series_opts(
                 label_opts=opts.LabelOpts(is_show=True),
                 axispointer_opts=opts.AxisPointerOpts(is_show=True))
                 .set_global_opts(
-                title_opts=opts.TitleOpts(title="可转债价格分布"),
+                title_opts=opts.TitleOpts(title="可转债涨幅分布"),
                 xaxis_opts=opts.AxisOpts(
                     name="涨跌幅",
                     is_show=True,
