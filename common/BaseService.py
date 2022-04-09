@@ -80,7 +80,7 @@ class BaseService(object):
                     headers=self.headers,
                     data=post_data
                 )
-
+                r.encoding='utf8'
             except Exception as e:
                 print(e)
                 start += 1

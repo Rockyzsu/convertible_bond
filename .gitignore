@@ -15,10 +15,8 @@ bases.csv
 config.py
 conf.py
 email_list.py
-settings.py
 config.json
 chromedriver.exe
-configure/
 data/
 log/
 settings.json
