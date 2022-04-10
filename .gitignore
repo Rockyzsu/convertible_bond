@@ -24,7 +24,6 @@ settings.json
 course/
 .ipynb_checkpoints/
 *.zip
-*.xls
 *.xlsx
 *.job
 *.m

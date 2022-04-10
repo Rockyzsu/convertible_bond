@@ -10,7 +10,9 @@ def get_config_data(config_file='config.json'):
         _config = json.load(f)
         return _config
 
+
 config = get_config_data()
+
 
 def config_dict(*args):
     result = config
@@ -22,6 +24,7 @@ def config_dict(*args):
             return None
 
     return result
+
 
 class DBSelector(object):
     '''
@@ -69,7 +72,7 @@ class DBSelector(object):
             client = AsyncIOMotorClient(connect_uri)
         else:
             import pymongo
-        client = pymongo.MongoClient(connect_uri)
+            client = pymongo.MongoClient(connect_uri)
         return client
 
 
