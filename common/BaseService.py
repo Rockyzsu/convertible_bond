@@ -89,6 +89,7 @@ class BaseService(object):
             else:
 
                 if _json:
+                    r.encoding='utf8'
                     result = r.json()
                 elif binary:
                     result = r.content

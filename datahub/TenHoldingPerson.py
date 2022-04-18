@@ -47,7 +47,7 @@ class TopTheHolding(BaseService):
         url = 'https://emh5.eastmoney.com/api/KeZhuanZhai/JiBenXinXi/GetShiDaChiYouRenList'
         data = {"fc": f"{code}{post_fix}", "color": "w", "pageSize": 1}
         js = self.post(url=url, post_data=data, _json=True)
-        print(js)
+        # print(js)
         return js
 
     def get_mongo_db(self):
