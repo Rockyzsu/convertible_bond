@@ -7,12 +7,10 @@
 import datetime
 import os
 import time
-
 import fire
-import requests
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from configure.settings import DBSelector, config_dict
+from configure.settings import DBSelector,config
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -20,9 +18,7 @@ import sys
 from selenium import webdriver
 from pyecharts.commons.utils import JsCode
 from common.BaseService import BaseService
-from configure.util import read_web_headers_cookies
 from datahub.jsl_login import login,headers
-from configure import config
 
 if sys.platform == 'win32':
     SELENIUM_PATH = r'C:\OneDrive\Tool\phantomjs-2.1.1-windows\phantomjs-2.1.1-windows\bin\phantomjs.exe'
@@ -77,7 +73,7 @@ class CBDistribution(BaseService):
 
     def __init__(self, noon=False):
         super(CBDistribution, self).__init__()
-        root_path = config_dict('data_path')
+        root_path = config['data_path']
         self.noon=noon
         if self.noon:
             self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb_noon.png")
@@ -136,7 +132,7 @@ class CBDistribution(BaseService):
         return data
 
     def download(self, url, data, retry=5):
-        session = login(config.jsl_user,config.jsl_password)
+        session = login(config['jsl_monitor']['JSL_USER'],config['jsl_monitor']['JSL_PASSWORD'])
         # headers,cookies = read_web_headers_cookies('jsl',headers=True,cookies=True)
         for i in range(retry):
             try:
