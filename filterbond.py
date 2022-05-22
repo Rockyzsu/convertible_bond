@@ -78,13 +78,14 @@ def get_low_price(code, start, end=datetime.date.today().strftime('%Y-%m-%d')):
     pre_closed = df.iloc[0]['close']
     last_closed = df.iloc[-1]['close']
     m_percent = round((last_closed - pre_closed) / pre_closed * 100, 2)
-
-    try:
-        w_pre_closed = df.iloc[-6]['close']  # 这里可以保证有6天，否则比例设为0
-    except Exception as e:
+    week_df_ = df.iloc[-6:]
+    if len(week_df_)==0:
         w_percent = 0
+        print(code)
     else:
+        w_pre_closed = week_df_['close'].iloc[0]
         w_percent = round((last_closed - w_pre_closed) / w_pre_closed * 100, 2)
+
 
     # 计算波动
     week_df = df.iloc[-5:]
