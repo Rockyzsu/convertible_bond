@@ -7,12 +7,10 @@
 import datetime
 import os
 import time
-
 import fire
-import requests
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from configure.settings import DBSelector, config_dict
+from configure.settings import DBSelector,config
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -20,9 +18,8 @@ import sys
 from selenium import webdriver
 from pyecharts.commons.utils import JsCode
 from common.BaseService import BaseService
-# from configure.util import read_web_headers_cookies
-from datahub.jsl_login import login,headers
 from configure.settings import config
+from datahub.jsl_login import login,headers
 
 if sys.platform == 'win32':
     SELENIUM_PATH = r'C:\OneDrive\Tool\phantomjs-2.1.1-windows\phantomjs-2.1.1-windows\bin\phantomjs.exe'
@@ -77,7 +74,7 @@ class CBDistribution(BaseService):
 
     def __init__(self, noon=False):
         super(CBDistribution, self).__init__()
-        root_path = config_dict('data_path')
+        root_path = config['data_path']
         self.noon=noon
         if self.noon:
             self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb_noon.png")
@@ -136,7 +133,7 @@ class CBDistribution(BaseService):
         return data
 
     def download(self, url, data, retry=5):
-        session = login(config.jsl_user,config.jsl_password)
+        session = login(config['jsl_monitor']['JSL_USER'],config['jsl_monitor']['JSL_PASSWORD'])
         # headers,cookies = read_web_headers_cookies('jsl',headers=True,cookies=True)
         for i in range(retry):
             try:
@@ -162,67 +159,54 @@ class CBDistribution(BaseService):
         if adjust_no_use:
 
             # 类型转换 部分含有%
-            df['premium_rt'] = df['premium_rt'].map(lambda x: float(x.replace('%', '')))
             df['price'] = df['price'].astype('float64')
             df['convert_price'] = df['convert_price'].astype('float64')
             df['premium_rt'] = df['premium_rt'].astype('float64')
-            df['redeem_price'] = df['redeem_price'].astype('float64')
+            df['force_redeem_price'] = df['force_redeem_price'].astype('float64')
 
-            def convert_float(x):
-                try:
-                    ret_float = float(x)
-                except:
-                    ret_float = None
-                return ret_float
 
-            def convert_percent(x):
-                try:
-                    ret = float(x) * 100
-                except:
-                    ret = None
-                return ret
-
-            def remove_percent(x):
-                try:
-                    ret = x.replace(r'%', '')
-                    ret = float(ret)
-                except Exception as e:
-                    ret = None
-
-                return ret
-
-            df['put_convert_price'] = df['put_convert_price'].map(convert_float)
-            df['sprice'] = df['sprice'].map(convert_float)
-            df['ration'] = df['ration'].map(convert_percent)
-            df['volume'] = df['volume'].map(convert_float)
-            df['convert_amt_ratio'] = df['convert_amt_ratio'].map(remove_percent)
-            df['ration_rt'] = df['ration_rt'].map(convert_float)
-            df['increase_rt'] = df['increase_rt'].map(remove_percent)
-            df['sincrease_rt'] = df['sincrease_rt'].map(remove_percent)
-
-            rename_columns = {'bond_id': '可转债代码', 'bond_nm': '可转债名称', 'price': '可转债价格', 'stock_nm': '正股名称',
-                              'stock_cd': '正股代码',
+            rename_columns = {'bond_id': '可转债代码', 'bond_nm': '可转债名称',
+                              'price': '可转债价格', 'stock_nm': '正股名称',
+                              'stock_id': '正股代码',
                               'sprice': '正股现价',
                               'sincrease_rt': '正股涨跌幅',
-                              'convert_price': '最新转股价', 'premium_rt': '溢价率', 'increase_rt': '可转债涨幅',
+                              'convert_price': '最新转股价', 'premium_rt': '溢价率',
+                              'increase_rt': '可转债涨幅',
+                              'convert_value': '转股价值',
+                              'dblow': '双低',
                               'put_convert_price': '回售触发价', 'convert_dt': '转股起始日',
                               'short_maturity_dt': '到期时间', 'volume': '成交额(万元)',
-                              'redeem_price': '强赎价格', 'year_left': '剩余时间',
-                              'next_put_dt': '回售起始日', 'rating_cd': '评级',
+                              'force_redeem_price': '强赎价格', 'year_left': '剩余时间',
+                              # 'next_put_dt': '回售起始日',
+                              'rating_cd': '评级',
                               # 'issue_dt': '发行时间',
                               # 'redeem_tc': '强制赎回条款',
                               # 'adjust_tc': '下修条件',
-                              'adjust_tip': '下修提示',
+                              'adjust_condition': '下修条件',
+                              'turnover_rt': '换手率',
+                              'convert_price_tips': '下修提示',
                               # 'put_tc': '回售',
-                              'adj_cnt': '下调次数',
+                              'adj_cnt': '提出下调次数',
+                              'svolume': '正股成交量',
                               #   'ration':'已转股比例'
                               'convert_amt_ratio': '转债剩余占总市值比',
                               'curr_iss_amt': '剩余规模', 'orig_iss_amt': '发行规模',
-                              'ration_rt': '股东配售率',
-                              'redeem_flag': '发出强赎公告',
+                              # 'ration_rt': '股东配售率',
+                              'option_tip': '期权价值',
+                              'bond_nm_tip': '强赎提示',
                               'redeem_dt': '强赎日期',
-                              'guarantor': '担保',
+                              'list_dt': '上市日期',
+                              'ytm_rt': '到期收益率',
+                              'redeem_icon': '强赎标志',
+                              'margin_flg': '是否两融标的',
+                              'adj_scnt': '下修成功次数',
+                              'convert_cd_tip': '转股日期提示',
+                              'ref_yield_info': '参考YTM',
+
+                              # 'guarantor': '担保',
                               }
+
+
 
             df = df.rename(columns=rename_columns)
             df = df[list(rename_columns.values())]
@@ -230,6 +214,7 @@ class CBDistribution(BaseService):
 
         df = df.set_index('可转债代码', drop=True)
         return df
+
     def get_bond_realtime(self):
         post_data = {
             'btype': 'C',
@@ -238,7 +223,7 @@ class CBDistribution(BaseService):
             'is_search': 'N',
         }
         timestamp = int(time.time() * 1000)
-        self.url = 'https://www.jisilu.cn/data/cbnew/cb_list/?___jsl=LST___t={}'.format(timestamp)
+        self.url = 'https://www.jisilu.cn/data/cbnew/cb_list_new/?___jsl=LST___t={}'.format(timestamp)
         js = self.download(self.url, data=post_data)
         if not js:
             return None

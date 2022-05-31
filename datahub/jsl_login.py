@@ -104,8 +104,7 @@ def login(user, password):
 
 
 def main():
-    today = datetime.datetime.now().strftime('%Y%m%d')
-    session = login(config['jsl_monitor']['JSL_USER'], config['jsl_monitor']['JSL_USER'])
+    session = login(config['jsl_monitor']['JSL_USER'], config['jsl_monitor']['JSL_PASSWORD'])
     ret = get_bond_info(session)
     df = pd.DataFrame(ret)
     print(df)
