@@ -20,9 +20,9 @@ import sys
 from selenium import webdriver
 from pyecharts.commons.utils import JsCode
 from common.BaseService import BaseService
-from configure.util import read_web_headers_cookies
+# from configure.util import read_web_headers_cookies
 from datahub.jsl_login import login,headers
-from configure import config
+from configure.settings import config
 
 if sys.platform == 'win32':
     SELENIUM_PATH = r'C:\OneDrive\Tool\phantomjs-2.1.1-windows\phantomjs-2.1.1-windows\bin\phantomjs.exe'
@@ -254,6 +254,8 @@ class CBDistribution(BaseService):
             df=df.reset_index()
         else:
             df = self.get_bond_data()
+
+        print(df.head())
         data = self.get_XY_data(df)
 
         bigger = data['bigger']
