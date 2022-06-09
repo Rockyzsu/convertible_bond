@@ -10,7 +10,7 @@ import time
 import fire
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from configure.settings import DBSelector,config
+from configure.settings import DBSelector, config
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -19,7 +19,7 @@ from selenium import webdriver
 from pyecharts.commons.utils import JsCode
 from common.BaseService import BaseService
 from configure.settings import config
-from datahub.jsl_login import login,headers
+from datahub.jsl_login import login, headers
 
 if sys.platform == 'win32':
     SELENIUM_PATH = r'C:\OneDrive\Tool\phantomjs-2.1.1-windows\phantomjs-2.1.1-windows\bin\phantomjs.exe'
@@ -75,7 +75,7 @@ class CBDistribution(BaseService):
     def __init__(self, noon=False):
         super(CBDistribution, self).__init__()
         root_path = config['data_path']
-        self.noon=noon
+        self.noon = noon
         if self.noon:
             self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb_noon.png")
             self.HMTL_PATH = os.path.join(root_path, f"{self.today}_cb_noon.html")
@@ -133,7 +133,7 @@ class CBDistribution(BaseService):
         return data
 
     def download(self, url, data, retry=5):
-        session = login(config['jsl_monitor']['JSL_USER'],config['jsl_monitor']['JSL_PASSWORD'])
+        session = login(config['jsl_monitor']['JSL_USER'], config['jsl_monitor']['JSL_PASSWORD'])
         # headers,cookies = read_web_headers_cookies('jsl',headers=True,cookies=True)
         for i in range(retry):
             try:
@@ -157,13 +157,11 @@ class CBDistribution(BaseService):
         df = pd.DataFrame(cell_list)
 
         if adjust_no_use:
-
             # 类型转换 部分含有%
             df['price'] = df['price'].astype('float64')
             df['convert_price'] = df['convert_price'].astype('float64')
             df['premium_rt'] = df['premium_rt'].astype('float64')
             df['force_redeem_price'] = df['force_redeem_price'].astype('float64')
-
 
             rename_columns = {'bond_id': '可转债代码', 'bond_nm': '可转债名称',
                               'price': '可转债价格', 'stock_nm': '正股名称',
@@ -206,8 +204,6 @@ class CBDistribution(BaseService):
                               # 'guarantor': '担保',
                               }
 
-
-
             df = df.rename(columns=rename_columns)
             df = df[list(rename_columns.values())]
             df['更新日期'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
@@ -236,7 +232,7 @@ class CBDistribution(BaseService):
     def generate_html(self):
         if self.noon:
             df = self.get_bond_realtime()
-            df=df.reset_index()
+            df = df.reset_index()
         else:
             df = self.get_bond_data()
 
@@ -254,18 +250,22 @@ class CBDistribution(BaseService):
 
         bar = (
             Bar()
-                .add_xaxis(list(data['result_dict'].keys()))
-                .add_yaxis(f"{self.today}-可转债涨幅分布", data['zz_list'], category_gap=3)
-                .add_yaxis(f"{self.today}-正股涨幅分布", data['zg_list'], category_gap=3)
-                .set_series_opts(
+            .add_xaxis(list(data['result_dict'].keys()))
+            .add_yaxis(f"{self.today}-可转债涨幅分布", data['zz_list'], category_gap=3)
+            .add_yaxis(f"{self.today}-正股涨幅分布", data['zg_list'], category_gap=3)
+            .set_series_opts(
                 label_opts=opts.LabelOpts(is_show=True),
                 axispointer_opts=opts.AxisPointerOpts(is_show=True))
-                .set_global_opts(
+            .set_global_opts(
                 title_opts=opts.TitleOpts(title="可转债涨幅分布"),
                 xaxis_opts=opts.AxisOpts(
                     name="涨跌幅",
                     is_show=True,
                     name_rotate=30,
+                    splitline_opts=opts.SplitLineOpts(is_show=True),
+                ),
+                yaxis_opts=opts.AxisOpts(
+                    splitline_opts=opts.SplitLineOpts(is_show=True),
                 ),
                 graphic_opts=[
                     opts.GraphicGroup(
@@ -274,7 +274,6 @@ class CBDistribution(BaseService):
                             top="20%",
                         ),
                         children=[
-
                             opts.GraphicText(
                                 graphic_item=opts.GraphicItem(
                                     left="center",

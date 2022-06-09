@@ -43,7 +43,7 @@ def decoder(text):
 
 def get_bond_info(session):
     ts = int(time.time() * 1000)
-    url = 'https://www.jisilu.cn/data/cbnew/cb_list/?___jsl=LST___t={}'.format(ts)
+    url = 'https://www.jisilu.cn/data/cbnew/cb_list_new/?___jsl=LST___t={}'.format(ts)
     data = {
         "fprice": None,
         "tprice": None,
@@ -67,7 +67,7 @@ def get_bond_info(session):
         headers=headers,
         data=data
     )
-    print(r.text)
+
     ret = r.json()
     result = []
     for item in ret['rows']:
@@ -103,12 +103,13 @@ def login(user, password):
         raise ValueError('登录失败')
 
 
-def main():
+def realtime_data():
     session = login(config['jsl_monitor']['JSL_USER'], config['jsl_monitor']['JSL_PASSWORD'])
     ret = get_bond_info(session)
     df = pd.DataFrame(ret)
-    print(df)
+    # print(df)
+    return df
 
 
 if __name__ == '__main__':
-    main()
+    realtime_data()
