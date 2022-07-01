@@ -200,7 +200,14 @@ def get_holding_list(filename=None):
     df = df[df['kzz'] == True]
     return df['证券代码'].tolist()
 
+
+
+def get_bond_convpact():
+    # 赎回价获取
+    from settings import get_tushare_pro
+    pro = get_tushare_pro()
+    df=pro.bond_convpact(ts_code='123011.SZ',fields='timecall_text')
+    print(df.head())
+
 if __name__ == '__main__':
-    for _ in range(5):
-        print(send_message_via_wechat(_message="first wechat message {}".format(time.time())))
-        time.sleep(0.5)
+    get_bond_convpact()

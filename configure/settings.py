@@ -65,6 +65,9 @@ class DBSelector(object):
             return conn
 
     def mongo(self, location_type='qq', async_type=False):
+        '''
+        async_type: 异步
+        '''
         user, password, host, port = self.config('mongo', location_type)
         connect_uri = f'mongodb://{user}:{password}@{host}:{port}'
         if async_type:
