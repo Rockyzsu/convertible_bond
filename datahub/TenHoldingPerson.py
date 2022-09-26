@@ -101,16 +101,91 @@ class TopTheHolding(BaseService):
             result_list = self.parse_json(js, code)
             self.dump_mongodb(result_list)
             time.sleep(random.randint(1, 3))
+class TopTheHoldingV2(BaseService):
+
+    def __init__(self):
+        super(TopTheHoldingV2, self).__init__(f'../log/TopTenHoldingPersion.log')
+        self.db = DBSelector()
+        self.today = datetime.datetime.today().strftime('%Y-%m-%d')
+
+    def get_jsl_data(self):
+        data = self.data_fetcher.jsl_bond
+        self.jsl_data = data['可转债代码'].tolist()
+
+    @property
+    def headers(self):
+        return {
+            'origin': 'https://emh5.eastmoney.com',
+            'pragma': 'no-cache',
+            'referer': 'https://emh5.eastmoney.com',
+            'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1'}
+
+    def init_db(self):
+        self.mongodb = self.get_mongo_db()
+        self.data_fetcher = DataFetcher()
+        self.get_jsl_data()
+
+    def crawl(self, code):
+        if code.startswith('12'):
+            code=code+'.SZ'
+        else:
+            code=code+'.SH'
+
+        url = 'https://datacenter.eastmoney.com/securities/api/data/get?client=APP&source=SECURITIES&type=RPT_BOND10_BS_HOLDER&sty=SECUCODE,SECURITY_CODE,BOND_NAME_ABBR,HOLDER_NAME,END_DATE,HOLD_NUM,HOLD_RATIO,HOLDER_RANK&filter=(SECUCODE%3D%22{}%22)&pageNumber=1&pageSize=50'.format(code)
+        print(url)
+        js = self.get(url=url, _json=True)
+        # print(js)
+        return js
+
+    def get_mongo_db(self):
+        return self.db.mongo('qq')['db_stock']
+
+    def parse_json(self, js, code):
+        result_list = []
+
+        if js is None or js.get('result') is None:
+            return result_list
+
+        result_list = js.get('result', {}).get('data', [])
+
+
+        return result_list
+
+    def dump_mongodb(self, result_list):
+        if len(result_list)==0:
+            print('empty')
+            return
+
+        try:
+            self.mongodb['bond_top_10_holding_{}'.format(self.today)].insert_many(result_list)
+        except Exception as e:
+            print(e)
+            self.mongodb = self.get_mongo_db()
+            self.mongodb['bond_top_10_holding_{}'.format(self.today)].insert_many(result_list)
+
+    def run(self):
+        self.init_db()
+        for code in self.jsl_data:
+            print(f'crawling {code}')
+            js = self.crawl(code)
+            result_list = self.parse_json(js, code)
+            self.dump_mongodb(result_list)
+            # time.sleep(random.randint(1, 3))
 
 
 def main(code=None):
-    app = TopTheHolding()
 
-    if code is None:
-        app.run()
-    else:
-        app.crawl(code)
+    # v1
+    # app = TopTheHolding()
+    #
+    # if code is None:
+    #     app.run()
+    # else:
+    #     app.crawl(code)
 
+    # v2
+    app = TopTheHoldingV2()
+    app.run()
 
 if __name__ == '__main__':
     fire.Fire(main)

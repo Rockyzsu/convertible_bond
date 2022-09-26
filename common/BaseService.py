@@ -16,15 +16,15 @@ class BaseService(object):
     def __init__(self, logfile='default.log'):
         self.logger = logger
         self.logger.add(logfile)
-        self.init_const_data()
         self.params=None
         self.cookies=None
+        self.today = datetime.datetime.now().strftime('%Y-%m-%d')
+        self.init_const_data()
 
     def init_const_data(self):
         '''
         常见的数据初始化
         '''
-        self.today = datetime.datetime.now().strftime('%Y-%m-%d')
 
     def check_path(self, path):
         if not os.path.exists(path):
@@ -59,6 +59,7 @@ class BaseService(object):
 
             else:
                 if _json:
+                    r.encoding='utf8'
                     result = r.json()
                 elif binary:
                     result = r.content
@@ -94,6 +95,7 @@ class BaseService(object):
                 elif binary:
                     result = r.content
                 else:
+                    r.encoding='utf8'
 
                     result = r.text
                 return result

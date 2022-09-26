@@ -52,7 +52,7 @@ def read_web_headers_cookies(website, headers=False, cookies=False):
         return_headers = config[website]['headers']
 
     if cookies:
-        return_headers = config[website]['cookies']
+        return_cookies = config[website]['cookies']
 
     return return_headers, return_cookies
 
@@ -184,6 +184,9 @@ def send_sms(content):
 def jsonp2json(str_):
     return json.loads(str_[str_.find('{'):str_.rfind('}') + 1])
 
+def js2json(str_):
+    import demjson
+    return demjson.decode(str_[str_.find('{'):str_.rfind('}') + 1])
 
 def bond_filter(code):
     m = re.search('^(11|12)', code)
@@ -200,7 +203,18 @@ def get_holding_list(filename=None):
     df = df[df['kzz'] == True]
     return df['证券代码'].tolist()
 
+def mongo_convert_df(doc,condition=None,project=None):
+    import pandas as pd
+    result =[]
+    for item in doc.find(condition,project):
+        result.append(item)
+    return pd.DataFrame(result)
 
+def get_jsl_code(table):
+    # from settings import DBSelector
+    engine = DBSelector().get_engine('db_stock','kh')
+    df = pd.read_sql(table,engine)
+    return df
 
 def get_bond_convpact():
     # 赎回价获取
@@ -210,4 +224,5 @@ def get_bond_convpact():
     print(df.head())
 
 if __name__ == '__main__':
-    get_bond_convpact()
+    print(get_jsl_code('tb_bond_jisilu'))
+
