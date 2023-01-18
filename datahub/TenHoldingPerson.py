@@ -10,6 +10,7 @@ import sys
 import time
 
 import fire
+import pandas as pd
 
 sys.path.append('..')
 
@@ -173,6 +174,30 @@ class TopTheHoldingV2(BaseService):
             # time.sleep(random.randint(1, 3))
 
 
+    def dump_excel(self):
+        self.mongodb = self.get_mongo_db()
+        doc = self.mongodb['bond_top_10_holding_{}'.format(self.today)]
+        result = []
+        for item in doc.find({}):
+            del item['_id']
+            result.append({'转债名称':item['BOND_NAME_ABBR'],
+                           '转债代码':item['SECUCODE'],
+                           '公布日期':item['END_DATE'],
+                           '持有人':item['HOLDER_NAME'],
+                           '持有张数':item['HOLD_NUM'],
+                           '持有比例':item['HOLD_RATIO'],
+                           '排名':item['HOLDER_RANK'],
+                           })
+
+        df=pd.DataFrame(result)
+        df=df[(df['持有人']=='合计')]
+        print(df.head())
+        import xlsxwriter
+        df.to_excel('十大持有人2022-12-04.xlsx',encoding='utf8',engine='xlsxwriter')
+
+
+
+
 def main(code=None):
 
     # v1
@@ -185,7 +210,8 @@ def main(code=None):
 
     # v2
     app = TopTheHoldingV2()
-    app.run()
+    # app.run()
+    app.dump_excel()
 
 if __name__ == '__main__':
     fire.Fire(main)

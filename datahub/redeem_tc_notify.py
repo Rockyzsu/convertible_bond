@@ -1,5 +1,6 @@
 # 强赎通知
 import datetime
+import re
 
 import pandas as pd
 from parsel import Selector
@@ -42,6 +43,7 @@ class Redemption(BaseService):
         return {'User-Agent': 'Apple Safari'}
 
     def analysis(self, info):
+        # print(info)
         if info not in STATUS:
             try:
                 meet, require = info.split('|')
@@ -69,16 +71,51 @@ class Redemption(BaseService):
         url = 'https://www.jisilu.cn/data/convert_bond_detail/{}'.format(code)
         content = self.get(url, _json=False)
         redeem_info = self.parse(content)
+        deathline_info = self.parse_deathline(content)
+        print('{} - {}'.format(code,redeem_info))
         status, first, second, require, word = self.analysis(redeem_info)
-        return status, first, second, require, word
+        return status, first, second, require, word,deathline_info
 
     def parse(self, content):
         resp = Selector(text=content)
-        redeem_info = resp.xpath('//td[contains(text(),"强赎状态")]/following-sibling::*[1]/text()').extract_first()
-        if redeem_info:
-            redeem_info = redeem_info.strip()
+        redeem_icon = resp.xpath('//td[contains(text(),"强赎天计数")]/following-sibling::*[1]/span/text()').extract_first()
+        chinese_str = resp.xpath('//td[contains(text(),"强赎天计数")]/following-sibling::*[1]/text()').extract_first()
 
-        return redeem_info
+        if redeem_icon:
+            redeem_icon = redeem_icon.strip()
+
+        if redeem_icon=='!':
+            redeem_icon=chinese_str.strip()
+
+        return redeem_icon
+
+    def parse_deathline(self,content):
+        # 加入可转债到期数据
+        resp = Selector(text=content)
+        nodes = resp.xpath('//span[@class="glyphicon glyphicon-info-sign"]/following-sibling::*[1]/text()').extract()
+        if len(nodes)==0:
+            return None
+        else:
+            if nodes[0]=='最后交易日':
+                txt = resp.xpath('//span[@class="glyphicon glyphicon-info-sign"]/following-sibling::*[2]/text()').extract_first()
+
+                print('最后一交易日',txt)
+                s = re.search('(\d+)年(\d+)月(\d+)日',txt)
+                if s:
+                    year = s.group(1)
+                    month = s.group(2)
+                    day = s.group(3)
+                    print(year)
+                    print(month)
+                    print(day)
+                    return '{}-{}-{}'.format(year,month,day)
+
+            return None
+
+
+
+
+
 
     def dump_db(self, data):
         # 存入mongo
@@ -117,7 +154,7 @@ class Redemption(BaseService):
         result = []
         for k, v in name_dict.items():
             item_dict = dict()
-            status, first, second, require, word = self.redemption_count(k)
+            status, first, second, require, word,deathline_info = self.redemption_count(k)
             item_dict['code'] = k
             item_dict['name'] = v
 
@@ -126,6 +163,8 @@ class Redemption(BaseService):
             item_dict['target_day'] = second
             item_dict['period'] = require
             item_dict['word'] = word
+            item_dict['last_trading_date'] = deathline_info
+            item_dict['updated_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             result.append(item_dict)
         return result
 
