@@ -10,7 +10,9 @@ import time
 import fire
 from pyecharts.render import make_snapshot
 from snapshot_selenium import snapshot
-from configure.settings import DBSelector, config
+import sys
+sys.path.append('..')
+from configure.settings import DBSelector
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Bar
@@ -76,6 +78,7 @@ class CBDistribution(BaseService):
         super(CBDistribution, self).__init__()
         root_path = config['data_path']
         self.noon = noon
+
         if self.noon:
             self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb_noon.png")
             self.HMTL_PATH = os.path.join(root_path, f"{self.today}_cb_noon.html")
@@ -84,7 +87,7 @@ class CBDistribution(BaseService):
             self.IMGAGE_PATH = os.path.join(root_path, f"{self.today}_cb.png")
             self.HMTL_PATH = os.path.join(root_path, f"{self.today}_cb.html")
 
-        self.check_path('data')
+        # self.check_path('data')
 
     def get_bond_data(self):
         DB = DBSelector()
@@ -180,7 +183,7 @@ class CBDistribution(BaseService):
                               # 'issue_dt': '发行时间',
                               # 'redeem_tc': '强制赎回条款',
                               # 'adjust_tc': '下修条件',
-                              'adjust_condition': '下修条件',
+                              # 'adjust_condition': '下修条件',
                               'turnover_rt': '换手率',
                               'convert_price_tips': '下修提示',
                               # 'put_tc': '回售',
@@ -236,7 +239,7 @@ class CBDistribution(BaseService):
         else:
             df = self.get_bond_data()
 
-        print(df.head())
+        # print(df.head())
         data = self.get_XY_data(df)
 
         bigger = data['bigger']
@@ -306,7 +309,10 @@ class CBDistribution(BaseService):
 
         bar.render(self.HMTL_PATH)
         # 自定义一个driver
-        make_snapshot(snapshot, bar.render(), self.IMGAGE_PATH, driver=driver)
+        try:
+            make_snapshot(snapshot, bar.render(), self.IMGAGE_PATH, driver=driver)
+        except Exception as e:
+            print(e)
 
 
 def main(noon=False):
