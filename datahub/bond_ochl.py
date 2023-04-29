@@ -17,14 +17,14 @@ class BondDailyInfo():
     '''
     def __init__(self):
         self.pro = get_tushare_pro()
-        self.conn = DBSelector().get_engine('db_bond_ochl','kh')
+        self.conn = DBSelector().get_engine('db_bond_ochl','qq')
 
 
     def run(self):
-        date = calendar('2021-09-01','2021-12-31')
+        date = calendar('2023-03-09','2023-04-29')
         from configure.util import fmt_date
         for d in date:
-            print(d)
+            print('写入数据{} '.format(d))
             d=fmt_date(d,'%Y-%m-%d','%Y%m%d')
             df = self.pro.cb_daily(trade_date=d)
             df=df.reset_index()

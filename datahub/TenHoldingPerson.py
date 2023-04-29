@@ -210,8 +210,8 @@ def main(code=None):
 
     # v2
     app = TopTheHoldingV2()
-    # app.run()
-    app.dump_excel()
+    app.run()
+    # app.dump_excel()
 
 if __name__ == '__main__':
     fire.Fire(main)
