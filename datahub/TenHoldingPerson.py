@@ -190,10 +190,10 @@ class TopTheHoldingV2(BaseService):
                            })
 
         df=pd.DataFrame(result)
-        df=df[(df['持有人']=='合计')]
+        # df=df[(df['持有人']=='合计')]
         print(df.head())
         import xlsxwriter
-        df.to_excel('十大持有人2022-12-04.xlsx',encoding='utf8',engine='xlsxwriter')
+        df.to_excel('十大持有人2022-12-04.xlsx',engine='xlsxwriter')
 
 
 
@@ -211,6 +211,7 @@ def main(code=None):
     # v2
     app = TopTheHoldingV2()
     app.run()
+    app.dump_excel()
 
 if __name__ == '__main__':
     fire.Fire(main)

@@ -25,6 +25,7 @@ class BaseService(object):
         '''
         常见的数据初始化
         '''
+        pass
 
     def check_path(self, path):
         if not os.path.exists(path):
